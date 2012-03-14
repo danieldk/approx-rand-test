@@ -64,15 +64,16 @@ approxRandPairTest testType stat n pTest s1 s2 =
 
 significance :: TestType -> Double -> Int -> (Int, Int) -> TestResult
 significance TwoTailed pTest n (leftR, rightR) =
-  if (pRight < pTest) then
+  if (pRight < pTail) then
     Significant pRight
-  else if (pLeft < pTest) then
+  else if (pLeft < pTail) then
     Significant pLeft
   else
     NotSignificant $ min pLeft pRight
   where
-    pLeft = 2.0 * pValue leftR n
-    pRight = 2.0 * pValue rightR n
+    pTail = pTest / 2.0 -- Allowed p-value per tail
+    pLeft = pValue leftR n
+    pRight = pValue rightR n
 significance OneTailed pTest n (_, rightR)     =
   if (pRight < pTest) then
     Significant pRight
