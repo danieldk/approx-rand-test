@@ -82,21 +82,31 @@ main = do
 applyTest :: RandomGen g => Options -> TestStatistic -> g -> Sample ->
   Sample -> IO ()
 applyTest opts stat prng v1 v2 = do
-  putStrLn $ printf "iterations: %d" $ optIterations opts
-  putStrLn $ printf "scores: %d" $ V.length v1
+  putStrLn $ printf "Iterations: %d" $ optIterations opts
+  putStrLn $ printf "Sample size: %d" $ V.length v1
 
   -- Calculate test statistic for original score sets.
   let tOrig = stat v1 v2
-  putStrLn $ printf "s_orig: %f" tOrig
+  putStrLn $ printf "Test statistic: %f" tOrig
 
   let testType = optTestType opts
 
+  let pTest = optSigP opts
+  let pTail = case testType of
+                OneTailed -> pTest
+                TwoTailed -> pTest / 2.0
+
+  -- Test information
+  putStrLn $ "Test type: " ++ show testType
+  putStrLn $ printf "Test significance: %f" $ pTest
+  putStrLn $ printf "Tail significance: %f" $ pTail
+
   -- Approximate randomization testing.
-  let test = approxRandPairTest testType stat (optIterations opts) 0.0001 v1 v2
+  let test = approxRandPairTest testType stat (optIterations opts) pTest v1 v2
   let result = evalRand test prng
   case result of
-    Significant    p -> putStrLn $ printf "Significant %f" p
-    NotSignificant p -> putStrLn $ printf "Not significant %f" p
+    Significant    p -> putStrLn $ printf "Significant: %f" p
+    NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: RandomGen g => Options -> TestStatistic -> g -> Sample ->
   Sample -> IO ()
@@ -109,6 +119,7 @@ data Options = Options {
   optIterations    :: Int,
   optPRNGSeed      :: Maybe Int,
   optPrintScores   :: Bool,
+  optSigP          :: Double,
   optTestStatistic :: TestStatistic,
   optTestType      :: TestType
 }
@@ -119,6 +130,7 @@ defaultOptions = Options {
   optIterations    = 1000,
   optPRNGSeed      = Nothing,
   optPrintScores   = False,
+  optSigP          = 0.01,
   optTestStatistic = meanDifference,
   optTestType      = TwoTailed
 }
@@ -134,6 +146,9 @@ options =
     Option ['o'] ["one-tailed"]
       (NoArg (\opt -> opt { optTestType = OneTailed }))
       "perform a one-tailed test",
+    Option ['p'] []
+      (ReqArg (\arg opt -> opt {optSigP = read arg }) "NUMBER")
+      "significant p-value",
     Option []    ["print-scores"]
       (NoArg (\opt -> opt { optPrintScores = True }))
       "output scores of permuted vectors",
