@@ -27,13 +27,12 @@ module Statistics.Test.ApproxRand (
 ) where
 
 import           Control.Monad (liftM, replicateM)
-import           Control.Monad.Random.Class (MonadRandom(..))
+import           Control.Monad.Mersenne.Random (Rand(..), getBool)
 import           Data.List (foldl')
 import qualified Data.Vector.Generic as VG
 import           Statistics.Sample (variance)
 import           Statistics.Test.Types (TestType(..))
 import           Statistics.Types
-import           System.Random (Random)
 
 -- |
 -- The result of hypothesis testing.
@@ -48,14 +47,14 @@ data TestResult =
 -- In pair-wise approximate randomization tests the scores at a given
 -- index are swapped between samples with a probability of 0.5. Since
 -- swapping is pairwise, the samples should have the same length.
-approxRandPairTest :: MonadRandom r =>
+approxRandPairTest ::
      TestType      -- ^ Type of test ('OneTailed' or 'TwoTailed')
   -> TestStatistic -- ^ Test statistic
   -> Int           -- ^ Number of sample permutations to create
   -> Double        -- ^ The p-value at which to test (e.g. 0.05)
   -> Sample        -- ^ First sample
   -> Sample        -- ^ Second sample
-  -> r TestResult  -- ^ The test result
+  -> Rand TestResult  -- ^ The test result
 approxRandPairTest testType stat n pTest s1 s2 =
   (significance testType pTest n . countExtremes tOrig) `liftM`
     approxRandPairScores stat n s1 s2
@@ -93,12 +92,12 @@ countExtremes tOrig =
 --
 -- Since the scores at a given index are swapped (with a probability of
 -- 0.5), the samples should have the same length.
-approxRandPairScores :: (MonadRandom r) =>
+approxRandPairScores ::
      TestStatistic -- ^ Test statistic
   -> Int           -- ^ Number of sample permutations to create
   -> Sample        -- ^ First sample
   -> Sample        -- ^ Second sample
-  -> r [Double]    -- ^ The scores of each permutation
+  -> Rand [Double]    -- ^ The scores of each permutation
 approxRandPairScores stat n s1 s2 =
   replicateM n $ (uncurry stat) `liftM` permuteVectors s1 s2
 
@@ -106,13 +105,14 @@ approxRandPairScores stat n s1 s2 =
 subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
 subVector = VG.zipWith (-)
 
-randomVector :: (MonadRandom r, Random a, VG.Vector v a) => Int -> r (v a)
+randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
 randomVector len =
-  VG.fromList `liftM` take len `liftM` getRandoms
+  VG.replicateM len getBool
+--  VG.fromList `liftM` take len `liftM` getRandoms
 
 -- | Permute two vectors.
-permuteVectors :: (MonadRandom r, VG.Vector v a, VG.Vector v Bool) =>
-  v a -> v a -> r (v a, v a)
+permuteVectors :: (VG.Vector v a, VG.Vector v Bool) =>
+  v a -> v a -> Rand (v a, v a)
 permuteVectors vec1 vec2 = do
   randomVec <- randomVector (VG.length vec1)
   let pv1 = VG.zipWith3 permute vec1 vec2 randomVec

@@ -13,8 +13,7 @@
 
 import           Control.Exception.Base (Exception)
 import           Control.Monad (liftM, when)
-import           Control.Monad.Random (evalRand)
-import           Control.Monad.Random.Class ()
+import           Control.Monad.Mersenne.Random (evalRandom)
 import           Control.Monad.Trans.Resource (ResourceThrow (..))
 import           Data.Conduit (($$), ($=)) 
 import qualified Data.Conduit as C
@@ -25,13 +24,14 @@ import qualified Data.Text as T
 import qualified Data.Text.Read as TR
 import           Data.Typeable (Typeable)
 import qualified Data.Vector.Unboxed as V
+import           Data.Word (Word64)
 import           Statistics.Test.ApproxRand
 import           Statistics.Test.Types (TestType(..))
 import           Statistics.Types (Sample)
 import           System.Console.GetOpt
 import           System.Environment (getArgs)
 import           System.Exit (exitFailure)
-import           System.Random (RandomGen, mkStdGen, getStdGen)
+import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
 data ReadException =
@@ -70,8 +70,8 @@ main = do
   let stat = optTestStatistic opts
 
   prng <- case optPRNGSeed opts of
-    Just seed -> return $ mkStdGen seed
-    Nothing   -> getStdGen
+    Just seed -> return $ pureMT seed
+    Nothing   -> newPureMT
 
   if optPrintScores opts then
     printScores opts stat prng v1 v2
@@ -79,7 +79,7 @@ main = do
     applyTest opts stat prng v1 v2
 
 
-applyTest :: RandomGen g => Options -> TestStatistic -> g -> Sample ->
+applyTest :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
@@ -103,21 +103,21 @@ applyTest opts stat prng v1 v2 = do
 
   -- Approximate randomization testing.
   let test = approxRandPairTest testType stat (optIterations opts) pTest v1 v2
-  let result = evalRand test prng
+  let result = evalRandom test prng
   case result of
     Significant    p -> putStrLn $ printf "Significant: %f" p
     NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
-printScores :: RandomGen g => Options -> TestStatistic -> g -> Sample ->
+printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 printScores opts stat prng v1 v2 = do
   mapM_ (putStrLn . printf "%f") $
-    evalRand (approxRandPairScores stat (optIterations opts) v1 v2) prng
+    evalRandom (approxRandPairScores stat (optIterations opts) v1 v2) prng
 
 data Options = Options {
   optColumn        :: Int,
   optIterations    :: Int,
-  optPRNGSeed      :: Maybe Int,
+  optPRNGSeed      :: Maybe Word64,
   optPrintScores   :: Bool,
   optSigP          :: Double,
   optTestStatistic :: TestStatistic,
