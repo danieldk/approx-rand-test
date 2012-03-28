@@ -9,21 +9,37 @@ Homepage:      http://github.com/danieldk/approx-rand-test
 Category:      Statistics
 Synopsis:      Approximate randomization test
 Description:   Utility to perform approximate randomization tests.
-Cabal-Version: >= 1.2
+Cabal-Version: >= 1.8
 Build-Type:    Simple
 
 Library
   HS-Source-Dirs:  src
   Ghc-Options:     -O2 -Wall
   Exposed-modules: Statistics.Test.ApproxRand
-  Build-Depends:   statistics == 0.10.1.*
+  Build-Depends:   base >= 4 && < 5, vector == 0.9.*,
+                   mersenne-random-pure64 == 0.2.0.*,
+                   monad-mersenne-random == 0.1,
+                   statistics == 0.10.1.*
 
 
 Executable approx_rand_test
-  main-is:       approx-rand-test.hs
-  HS-Source-Dirs:  src
-  Ghc-Options:   -O2 -Wall
-  Build-Depends: base >= 4 && < 5, conduit == 0.2.* && < 0.3,
-                 MonadRandom >= 0.1.6 && < 0.2, text == 0.11.1.*,
-                 vector == 0.9.*, mersenne-random-pure64 == 0.2.0.*,
-                 monad-mersenne-random == 0.1
+  main-is:        approx-rand-test.hs
+  HS-Source-Dirs: src
+  Ghc-Options:    -O2 -Wall
+  Build-Depends:  base >= 4 && < 5, conduit == 0.2.* && < 0.3,
+                  text == 0.11.1.*, vector == 0.9.*,
+                  mersenne-random-pure64 == 0.2.0.*,
+                  monad-mersenne-random == 0.1, statistics == 0.10.1.*
+
+Test-Suite tests
+  Type:           exitcode-stdio-1.0
+  Hs-Source-Dirs: tests
+  Main-Is:        tests.hs
+  ghc-options:    -Wall
+  Build-Depends:  base >= 4 && < 5, vector == 0.9.*,
+                  approx-rand-test,
+                  mersenne-random-pure64 == 0.2.0.*,
+                  monad-mersenne-random == 0.1,
+                  HUnit == 1.2.4.*,
+                  test-framework == 0.6.*,
+                  test-framework-hunit == 0.2.*
