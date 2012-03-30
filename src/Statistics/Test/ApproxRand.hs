@@ -79,7 +79,7 @@ significant pTail p =
   if p < pTail then Significant p else NotSignificant p
 
 pValue :: Int -> Int -> Double
-pValue n r = ((fromIntegral r) + 1.0) / ((fromIntegral n) + 1.0)
+pValue n r = ((fromIntegral r) + 1) / ((fromIntegral n) + 1)
 
 countExtremes ::
      Double
@@ -110,16 +110,6 @@ approxRandPairScores stat n s1 s2 = do
     throwError "Cannot calculate pairwise scores: samples have different sizes"
   lift $ replicateM n $ (uncurry stat) `liftM` permuteVectors s1 s2
 
--- | Subtract two vectors.
-subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
-subVector = VG.zipWith (-)
-
-
-randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
-randomVector len =
-  VG.replicateM len getBool
---  VG.fromList `liftM` take len `liftM` getRandoms
-
 -- | Permute two vectors.
 permuteVectors :: (VG.Vector v a, VG.Vector v Bool) =>
   v a -> v a -> Rand (v a, v a)
@@ -132,6 +122,10 @@ permuteVectors vec1 vec2 = do
     permute val1 val2 coin =
       if coin then val1 else val2
 
+randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
+randomVector len =
+  VG.replicateM len getBool
+
 -- |
 -- A test stastic calculates the difference between two samples. See
 -- 'meanDifference' and 'varianceRatio' for examples.
@@ -143,7 +137,7 @@ type TestStatistic = Sample -> Sample -> Double
 -- longer vector are ignored.
 differenceMean :: TestStatistic
 differenceMean v1 v2 =
-  (/ (fromIntegral $ VG.length v1)) $ VG.sum $ subVector v1 v2
+  (VG.sum $ subVector v1 v2) / (fromIntegral $ VG.length v1)
 
 -- |
 -- Calculate the ratio of sample variances (/var(s1) : var(s2)/)
@@ -151,3 +145,6 @@ varianceRatio :: TestStatistic
 varianceRatio v1 v2 =
   (variance v1) / (variance v2)
 
+-- | Subtract two vectors.
+subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
+subVector = VG.zipWith (-)

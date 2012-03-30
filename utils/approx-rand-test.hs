@@ -95,7 +95,7 @@ applyTest opts stat prng v1 v2 = do
   let pTest = optSigP opts
   let pTail = case testType of
                 OneTailed -> pTest
-                TwoTailed -> pTest / 2.0
+                TwoTailed -> pTest / 2
 
   -- Test information
   putStrLn $ "Test type: " ++ show testType
