@@ -13,6 +13,7 @@
 
 import           Control.Exception.Base (Exception)
 import           Control.Monad (liftM, when)
+import           Control.Monad.Error (runErrorT)
 import           Control.Monad.Mersenne.Random (evalRandom)
 import           Control.Monad.Trans.Resource (ResourceThrow (..))
 import           Data.Conduit (($$), ($=)) 
@@ -102,17 +103,20 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Tail significance: %f" $ pTail
 
   -- Approximate randomization testing.
-  let test = approxRandPairTest testType stat (optIterations opts) pTest v1 v2
+  let test = runErrorT $ approxRandPairTest testType stat (optIterations opts) pTest v1 v2
   let result = evalRandom test prng
   case result of
-    Significant    p -> putStrLn $ printf "Significant: %f" p
-    NotSignificant p -> putStrLn $ printf "Not significant: %f" p
+    Left  err                -> putStrLn err
+    Right (Significant    p) -> putStrLn $ printf "Significant: %f" p
+    Right (NotSignificant p) -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 printScores opts stat prng v1 v2 = do
-  mapM_ (putStrLn . printf "%f") $
-    evalRandom (approxRandPairScores stat (optIterations opts) v1 v2) prng
+  let test = runErrorT $ approxRandPairScores stat (optIterations opts) v1 v2
+  case evalRandom test prng of
+    Left err     -> putStrLn err
+    Right scores -> mapM_ (putStrLn . printf "%f") scores
 
 data Options = Options {
   optColumn        :: Int,

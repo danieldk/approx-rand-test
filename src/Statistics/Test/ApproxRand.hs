@@ -23,16 +23,23 @@ module Statistics.Test.ApproxRand (
   varianceRatio,
 
   -- * Data types
-  TestResult(..)
+  TestResult(..),
+  RandWithError
 ) where
 
-import           Control.Monad (liftM, replicateM)
+import           Control.Monad (liftM, replicateM, when)
+import           Control.Monad.Error (ErrorT)
+import           Control.Monad.Error.Class (throwError)
 import           Control.Monad.Mersenne.Random (Rand(..), getBool)
+import           Control.Monad.Trans.Class (lift)
 import           Data.List (foldl')
 import qualified Data.Vector.Generic as VG
 import           Statistics.Sample (variance)
 import           Statistics.Test.Types (TestType(..))
 import           Statistics.Types
+
+-- | Computations with random numbers that can fail.
+type RandWithError a = ErrorT String Rand a
 
 -- |
 -- The result of hypothesis testing.
@@ -48,13 +55,13 @@ data TestResult =
 -- index are swapped between samples with a probability of 0.5. Since
 -- swapping is pairwise, the samples should have the same length.
 approxRandPairTest ::
-     TestType      -- ^ Type of test ('OneTailed' or 'TwoTailed')
-  -> TestStatistic -- ^ Test statistic
-  -> Int           -- ^ Number of sample permutations to create
-  -> Double        -- ^ The p-value at which to test (e.g. 0.05)
-  -> Sample        -- ^ First sample
-  -> Sample        -- ^ Second sample
-  -> Rand TestResult  -- ^ The test result
+     TestType                 -- ^ Type of test ('OneTailed' or 'TwoTailed')
+  -> TestStatistic            -- ^ Test statistic
+  -> Int                      -- ^ Number of sample permutations to create
+  -> Double                   -- ^ The p-value at which to test (e.g. 0.05)
+  -> Sample                   -- ^ First sample
+  -> Sample                   -- ^ Second sample
+  -> RandWithError TestResult -- ^ The test result
 approxRandPairTest testType stat n pTest s1 s2 =
   (significance testType pTest n . countExtremes tOrig) `liftM`
     approxRandPairScores stat n s1 s2
@@ -93,17 +100,20 @@ countExtremes tOrig =
 -- Since the scores at a given index are swapped (with a probability of
 -- 0.5), the samples should have the same length.
 approxRandPairScores ::
-     TestStatistic -- ^ Test statistic
-  -> Int           -- ^ Number of sample permutations to create
-  -> Sample        -- ^ First sample
-  -> Sample        -- ^ Second sample
-  -> Rand [Double]    -- ^ The scores of each permutation
-approxRandPairScores stat n s1 s2 =
-  replicateM n $ (uncurry stat) `liftM` permuteVectors s1 s2
+     TestStatistic          -- ^ Test statistic
+  -> Int                    -- ^ Number of sample permutations to create
+  -> Sample                 -- ^ First sample
+  -> Sample                 -- ^ Second sample
+  -> RandWithError [Double] -- ^ The scores of each permutation
+approxRandPairScores stat n s1 s2 = do
+  when (VG.length s1 /= VG.length s2) $
+    throwError "Cannot calculate pairwise scores: samples have different sizes"
+  lift $ replicateM n $ (uncurry stat) `liftM` permuteVectors s1 s2
 
 -- | Subtract two vectors.
 subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
 subVector = VG.zipWith (-)
+
 
 randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
 randomVector len =
