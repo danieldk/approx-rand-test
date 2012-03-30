@@ -19,7 +19,7 @@ module Statistics.Test.ApproxRand (
 
   -- * Test statistics
   TestStatistic,
-  meanDifference,
+  differenceMean,
   varianceRatio,
 
   -- * Data types
@@ -138,9 +138,11 @@ permuteVectors vec1 vec2 = do
 type TestStatistic = Sample -> Sample -> Double
 
 -- |
--- Calculates the mean difference of two samples (/mean(s1 - s2)/).
-meanDifference :: TestStatistic
-meanDifference v1 v2 =
+-- Calculates the difference mean of two samples (/mean(s1 - s2)/). When the
+-- two samples do not have an equal length, the trailing elements of the
+-- longer vector are ignored.
+differenceMean :: TestStatistic
+differenceMean v1 v2 =
   (/ (fromIntegral $ VG.length v1)) $ VG.sum $ subVector v1 v2
 
 -- |

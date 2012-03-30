@@ -135,7 +135,7 @@ defaultOptions = Options {
   optPRNGSeed      = Nothing,
   optPrintScores   = False,
   optSigP          = 0.01,
-  optTestStatistic = meanDifference,
+  optTestStatistic = differenceMean,
   optTestType      = TwoTailed
 }
 
@@ -182,6 +182,6 @@ getOptions = do
       header = "Usage: approx-rand-test [OPTION...] scores scores2"
 
 parseStatistic :: String -> TestStatistic
-parseStatistic "mean_diff" = meanDifference
+parseStatistic "mean_diff" = differenceMean
 parseStatistic "var_ratio" = varianceRatio
 parseStatistic _           = error "Unknown test statistic"
