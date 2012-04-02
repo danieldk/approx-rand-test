@@ -11,6 +11,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 module Statistics.Test.ApproxRand (
   -- * Approximate randomization tests
@@ -29,6 +30,8 @@ module Statistics.Test.ApproxRand (
   -- * Data types
   TestResult(..),
   RandWithError,
+
+  shuffleVector
 ) where
 
 import           Prelude hiding ((++))
@@ -179,10 +182,10 @@ shuffleVectors v1 v2 = do
 
 shuffleVector :: VG.Vector v a => v a -> Rand (v a)
 shuffleVector v = do
-  let len = VG.length v
-  swaps <- forM (enumFromThenTo (len - 1) (len - 2) 1) $ \upper -> do
-    r <- getIntR (0, upper)
-    return (upper, r)
+  let maxIdx = VG.length v - 1
+  swaps <- forM [0..maxIdx] $ \idx -> do
+    r <- getIntR (idx, maxIdx)
+    return (idx, r)
   return $ runST $ do
     vm <- VG.thaw v
     forM_ swaps (uncurry $ GM.unsafeSwap vm)
@@ -227,13 +230,18 @@ subVector = VG.zipWith (-)
 
 subIIW :: Int -> Int -> Word
 subIIW a b = fromIntegral a - fromIntegral b
+{-# INLINE subIIW #-}
+
+addIWI :: Int -> Word -> Int
+addIWI a b = a + fromIntegral b
+{-# INLINE addIWI #-}
 
 randomIntR :: PureMT -> (Int, Int) -> (Int, PureMT)
 randomIntR gen (a, b)
   | n == 0    = randomInt gen
   | otherwise = loop gen
   where
-    (a', b') = if a < b then (a, b) else (b, a)
+    (# a', b' #) = if a < b then (# a, b #) else (# b, a #)
     -- Number of different Ints that should be generated
     n = 1 + subIIW b' a'
     -- The total range of Word can hold x complete n ranges
@@ -242,10 +250,12 @@ randomIntR gen (a, b)
     s = x * n
     loop gen'
       | r >= s    = loop gen'' -- r is outside the range, discard it...
-      | otherwise = (a' + (fromIntegral (r `div` x)), gen'') 
+      | otherwise = (addIWI a' (r `div` x), gen'') 
       where
         (!r, !gen'') = randomWord gen'
+{-# INLINE randomIntR #-}
 
 getIntR :: (Int, Int) -> Rand Int
 getIntR range =
   Rand $ \s -> case randomIntR s range of (w, s') -> R w s'
+{-# INLINE getIntR #-}
