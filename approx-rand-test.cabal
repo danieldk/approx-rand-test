@@ -32,6 +32,18 @@ Executable approx_rand_test
                   text == 0.11.1.*, vector == 0.9.*,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1,
+                  statistics == 0.10.1.*
+
+
+Executable approx_rand_test_paired
+  Main-Is:        approx-rand-test-paired.hs
+  HS-Source-Dirs: utils
+  Ghc-Options:    -O2 -Wall
+  Build-Depends:  base >= 4 && < 5, approx-rand-test,
+                  conduit == 0.2.* && < 0.3,
+                  text == 0.11.1.*, vector == 0.9.*,
+                  mersenne-random-pure64 == 0.2.0.*,
+                  monad-mersenne-random == 0.1,
                   mtl == 2.0.1.*, statistics == 0.10.1.*
 
 Test-Suite tests

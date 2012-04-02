@@ -13,6 +13,7 @@
 
 import           Control.Exception.Base (Exception)
 import           Control.Monad (liftM, when)
+import           Control.Monad.Error (runErrorT)
 import           Control.Monad.Mersenne.Random (evalRandom)
 import           Control.Monad.Trans.Resource (ResourceThrow (..))
 import           Data.Conduit (($$), ($=)) 
@@ -83,7 +84,7 @@ applyTest :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
-  putStrLn $ printf "Sample sizes: %d %d" (V.length v1) (V.length v2)
+  putStrLn $ printf "Sample size: %d" $ V.length v1
 
   -- Calculate test statistic for original score sets.
   let tOrig = stat v1 v2
@@ -102,17 +103,20 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Tail significance: %f" $ pTail
 
   -- Approximate randomization testing.
-  let test = approxRandTest testType stat (optIterations opts) pTest v1 v2
+  let test = runErrorT $ approxRandPairTest testType stat (optIterations opts) pTest v1 v2
   let result = evalRandom test prng
   case result of
-    Significant    p -> putStrLn $ printf "Significant: %f" p
-    NotSignificant p -> putStrLn $ printf "Not significant: %f" p
+    Left  err                -> putStrLn err
+    Right (Significant    p) -> putStrLn $ printf "Significant: %f" p
+    Right (NotSignificant p) -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
-printScores opts stat prng v1 v2 =
-  mapM_ (putStrLn . printf "%f") $
-    evalRandom (approxRandScores stat (optIterations opts) v1 v2) prng
+printScores opts stat prng v1 v2 = do
+  let test = runErrorT $ approxRandPairScores stat (optIterations opts) v1 v2
+  case evalRandom test prng of
+    Left err     -> putStrLn err
+    Right scores -> mapM_ (putStrLn . printf "%f") scores
 
 data Options = Options {
   optColumn        :: Int,
@@ -131,7 +135,7 @@ defaultOptions = Options {
   optPRNGSeed      = Nothing,
   optPrintScores   = False,
   optSigP          = 0.01,
-  optTestStatistic = meanDifference,
+  optTestStatistic = differenceMean,
   optTestType      = TwoTailed
 }
 
@@ -178,6 +182,6 @@ getOptions = do
       header = "Usage: approx-rand-test [OPTION...] scores scores2"
 
 parseStatistic :: String -> TestStatistic
-parseStatistic "mean_diff" = meanDifference
+parseStatistic "mean_diff" = differenceMean
 parseStatistic "var_ratio" = varianceRatio
 parseStatistic _           = error "Unknown test statistic"

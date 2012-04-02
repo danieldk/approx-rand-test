@@ -11,15 +11,20 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 module Statistics.Test.ApproxRand (
   -- * Approximate randomization tests
+  approxRandTest,
+  approxRandScores,
+
   approxRandPairTest,
   approxRandPairScores,
 
   -- * Test statistics
   TestStatistic,
   differenceMean,
+  meanDifference,
   varianceRatio,
 
   -- * Data types
@@ -27,16 +32,22 @@ module Statistics.Test.ApproxRand (
   RandWithError
 ) where
 
+import           Prelude hiding ((++))
 import           Control.Monad (liftM, replicateM, when)
 import           Control.Monad.Error (ErrorT)
 import           Control.Monad.Error.Class (throwError)
-import           Control.Monad.Mersenne.Random (Rand(..), getBool)
+import           Control.Monad.Mersenne.Random (R(..), Rand(..), getBool)
+import           Control.Monad.ST (runST)
 import           Control.Monad.Trans.Class (lift)
 import           Data.List (foldl')
+import           Data.Vector.Generic ((++))
 import qualified Data.Vector.Generic as VG
+import qualified Data.Vector.Generic.Mutable as GM
+import           Data.Word (Word)
 import           Statistics.Sample (variance)
 import           Statistics.Test.Types (TestType(..))
 import           Statistics.Types
+import           System.Random.Mersenne.Pure64 (PureMT, randomInt, randomWord)
 
 -- | Computations with random numbers that can fail.
 type RandWithError a = ErrorT String Rand a
@@ -65,6 +76,27 @@ approxRandPairTest ::
 approxRandPairTest testType stat n pTest s1 s2 =
   (significance testType pTest n . countExtremes tOrig) `liftM`
     approxRandPairScores stat n s1 s2
+  where
+    tOrig = stat s1 s2
+
+-- |
+-- Apply an approximate randomization test.
+--
+-- In approximate randomization tests, the values of two samples are
+-- shuffled among those samples. A test statistic is calculated for
+-- the original samples and the permutations, to detect whether the
+-- difference of the samples is extreme or not.
+approxRandTest ::
+     TestType
+  -> TestStatistic
+  -> Int
+  -> Double
+  -> Sample
+  -> Sample
+  -> Rand TestResult
+approxRandTest testType stat n pTest s1 s2 =
+  (significance testType pTest n . countExtremes tOrig) `liftM`
+    approxRandScores stat n s1 s2
   where
     tOrig = stat s1 s2
 
@@ -110,6 +142,20 @@ approxRandPairScores stat n s1 s2 = do
     throwError "Cannot calculate pairwise scores: samples have different sizes"
   lift $ replicateM n $ (uncurry stat) `liftM` permuteVectors s1 s2
 
+-- |
+-- Generate a given number of sample permutations, and calculate the test
+-- score for each permutation.
+--
+-- This function does not require the samples to have an equal length.
+approxRandScores ::
+     TestStatistic
+  -> Int
+  -> Sample
+  -> Sample
+  -> Rand [Double]
+approxRandScores stat n s1 s2 =
+  replicateM n $ uncurry stat `liftM` shuffleVectors s1 s2
+
 -- | Permute two vectors.
 permuteVectors :: (VG.Vector v a, VG.Vector v Bool) =>
   v a -> v a -> Rand (v a, v a)
@@ -126,6 +172,34 @@ randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
 randomVector len =
   VG.replicateM len getBool
 
+-- Shuffle values amongst two vectors, keeping the original vector lengths.
+shuffleVectors :: VG.Vector v a => v a -> v a -> Rand (v a, v a)
+shuffleVectors v1 v2 = do
+  shuffledVectors <- shuffleVector $ v1 ++ v2
+  return (VG.slice 0 (VG.length v1) shuffledVectors,
+    VG.slice (VG.length v1) (VG.length v2) shuffledVectors)
+
+-- Fisher-Yates shuffle in the Rand monad
+shuffleVector :: VG.Vector v a => v a -> Rand (v a)
+shuffleVector v =
+  Rand $ \s -> case shuffleVector' s v of (sv, s') -> R sv s'
+
+-- Fisher-Yates shuffle
+shuffleVector' :: VG.Vector v a => PureMT -> v a -> (v a, PureMT)
+shuffleVector' gen v = runST $ do
+  let maxIdx = VG.length v - 1
+  vm   <- VG.thaw v
+  gen' <- swaps vm 0 maxIdx gen
+  vmf  <- VG.unsafeFreeze vm
+  return (vmf, gen')
+  where
+    swaps vm idx maxIdx gen'
+      | idx < maxIdx = do
+          let (newIdx, gen'') = randomIntR gen' (idx, maxIdx)
+          GM.unsafeSwap vm idx newIdx
+          swaps vm (idx + 1) maxIdx gen''
+      | otherwise = return gen'
+
 -- |
 -- A test stastic calculates the difference between two samples. See
 -- 'meanDifference' and 'varianceRatio' for examples.
@@ -140,6 +214,18 @@ differenceMean v1 v2 =
   (VG.sum $ subVector v1 v2) / (fromIntegral $ VG.length v1)
 
 -- |
+-- Calculates the mean difference of two samples (/mean(s1) - mean(s2)/).
+meanDifference :: TestStatistic
+meanDifference s1 s2 =
+  (mean s1) - (mean s2)
+
+mean :: Sample -> Double
+mean = do
+  t <- VG.sum
+  l <- VG.length
+  return $ t / fromIntegral l
+
+-- |
 -- Calculate the ratio of sample variances (/var(s1) : var(s2)/)
 varianceRatio :: TestStatistic
 varianceRatio v1 v2 =
@@ -148,3 +234,32 @@ varianceRatio v1 v2 =
 -- | Subtract two vectors.
 subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
 subVector = VG.zipWith (-)
+
+-- Generate Int numbers within a range
+
+subIIW :: Int -> Int -> Word
+subIIW a b = fromIntegral a - fromIntegral b
+{-# INLINE subIIW #-}
+
+addIWI :: Int -> Word -> Int
+addIWI a b = a + fromIntegral b
+{-# INLINE addIWI #-}
+
+randomIntR :: PureMT -> (Int, Int) -> (Int, PureMT)
+randomIntR gen (a, b)
+  | n == 0    = randomInt gen
+  | otherwise = loop gen
+  where
+    (# a', b' #) = if a < b then (# a, b #) else (# b, a #)
+    -- Number of different Ints that should be generated
+    n = 1 + subIIW b' a'
+    -- The total range of Word can hold x complete n ranges
+    x = (maxBound `div` n)
+    -- Pick from a range the is dividable by n without remainders
+    s = x * n
+    loop gen'
+      | r >= s    = loop gen'' -- r is outside the range, discard it...
+      | otherwise = (addIWI a' (r `div` x), gen'') 
+      where
+        (!r, !gen'') = randomWord gen'
+{-# INLINE randomIntR #-}
