@@ -35,7 +35,7 @@ Executable approx_rand_test
                   statistics == 0.10.1.*
 
 
-Executable approx_rand_test-paired
+Executable approx_rand_test_paired
   Main-Is:        approx-rand-test-paired.hs
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
