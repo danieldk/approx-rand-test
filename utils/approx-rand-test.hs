@@ -83,7 +83,7 @@ applyTest :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
-  putStrLn $ printf "Sample size: %d" $ V.length v1
+  putStrLn $ printf "Sample sizes: %d %d" (V.length v1) (V.length v2)
 
   -- Calculate test statistic for original score sets.
   let tOrig = stat v1 v2
