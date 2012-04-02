@@ -29,13 +29,11 @@ module Statistics.Test.ApproxRand (
 
   -- * Data types
   TestResult(..),
-  RandWithError,
-
-  shuffleVector
+  RandWithError
 ) where
 
 import           Prelude hiding ((++))
-import           Control.Monad (forM, forM_, liftM, replicateM, when)
+import           Control.Monad (liftM, replicateM, when)
 import           Control.Monad.Error (ErrorT)
 import           Control.Monad.Error.Class (throwError)
 import           Control.Monad.Mersenne.Random (R(..), Rand(..), getBool)
@@ -174,22 +172,33 @@ randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
 randomVector len =
   VG.replicateM len getBool
 
+-- Shuffle values amongst two vectors, keeping the original vector lengths.
 shuffleVectors :: VG.Vector v a => v a -> v a -> Rand (v a, v a)
 shuffleVectors v1 v2 = do
   shuffledVectors <- shuffleVector $ v1 ++ v2
   return (VG.slice 0 (VG.length v1) shuffledVectors,
     VG.slice (VG.length v1) (VG.length v2) shuffledVectors)
 
+-- Fisher-Yates shuffle in the Rand monad
 shuffleVector :: VG.Vector v a => v a -> Rand (v a)
-shuffleVector v = do
+shuffleVector v =
+  Rand $ \s -> case shuffleVector' s v of (sv, s') -> R sv s'
+
+-- Fisher-Yates shuffle
+shuffleVector' :: VG.Vector v a => PureMT -> v a -> (v a, PureMT)
+shuffleVector' gen v = runST $ do
   let maxIdx = VG.length v - 1
-  swaps <- forM [0..maxIdx] $ \idx -> do
-    r <- getIntR (idx, maxIdx)
-    return (idx, r)
-  return $ runST $ do
-    vm <- VG.thaw v
-    forM_ swaps (uncurry $ GM.unsafeSwap vm)
-    VG.unsafeFreeze vm
+  vm   <- VG.thaw v
+  gen' <- swaps vm 0 maxIdx gen
+  vmf  <- VG.unsafeFreeze vm
+  return (vmf, gen')
+  where
+    swaps vm idx maxIdx gen'
+      | idx < maxIdx = do
+          let (newIdx, gen'') = randomIntR gen' (idx, maxIdx)
+          GM.unsafeSwap vm idx newIdx
+          swaps vm (idx + 1) maxIdx gen''
+      | otherwise = return gen'
 
 -- |
 -- A test stastic calculates the difference between two samples. See
@@ -254,8 +263,3 @@ randomIntR gen (a, b)
       where
         (!r, !gen'') = randomWord gen'
 {-# INLINE randomIntR #-}
-
-getIntR :: (Int, Int) -> Rand Int
-getIntR range =
-  Rand $ \s -> case randomIntR s range of (w, s') -> R w s'
-{-# INLINE getIntR #-}
