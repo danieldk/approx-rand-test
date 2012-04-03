@@ -127,7 +127,7 @@ data Options = Options {
 defaultOptions :: Options
 defaultOptions = Options {
   optColumn        = 1,
-  optIterations    = 1000,
+  optIterations    = 10000,
   optPRNGSeed      = Nothing,
   optPrintScores   = False,
   optSigP          = 0.01,
