@@ -5,8 +5,9 @@
 -- Maintainer : Daniël de Kok <me@danieldk.eu>
 -- Stability  : experimental
 --
--- Approximate randomization test (Noreen, 1989)
---
+-- This module provides functionality to perform approximate randomization
+-- tests (Noreen, 1989).
+
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
@@ -14,6 +15,12 @@
 {-# LANGUAGE UnboxedTuples #-}
 
 module Statistics.Test.ApproxRand (
+  -- * Description
+  -- $description
+
+  -- * Examples
+  -- $examples
+
   -- * Approximate randomization tests
   approxRandTest,
   approxRandScores,
@@ -48,6 +55,56 @@ import           Statistics.Sample (variance)
 import           Statistics.Test.Types (TestType(..))
 import           Statistics.Types
 import           System.Random.Mersenne.Pure64 (PureMT, randomInt, randomWord)
+
+
+-- $description
+--
+-- Approximate randomization tests rely on a simple premise: given a test
+-- statistic, if the null-hypothesis (the samples do not differ) is true,
+-- we can randomly swap values between samples without an (extreme) impact
+-- on the test statistic. Otherwise, the null-hypothesis must be rejected.
+--
+-- The test works by generating a given number of sample shuffles and computing
+-- the test statistic for each shuffle. If /r/ is the number of shuffled
+-- samples where the test statistic is at least as high as the test statistic
+-- applied on the original samples; and /N/ the number of shuffles, then
+-- the null-hypothesis is rejected iff /(r + 1):(N + 1) < p-value/ (for
+-- one-sided tests).
+--
+-- Two kinds of test are supported:
+--
+-- * /Paired sample/ ('approxRandPairTest'): values from samples are shuffled
+--   pair-wise. This requires the samples to have an equal length.
+--
+-- * /Unpaired sample/ ('approxRandTest'): values from samples are shuffled
+--   among both samples. Consequently the i-th element of one sample does not
+--   bear a relationship with the i-th element of the other sample. The
+--   shuffled samples retain the sizes of the original samples.
+--
+-- Both tests can be performed as a one-tailed or two-tailed test.
+
+-- $examples
+-- Both unpaired and paired sample tests use the 'Rand' monad to obtain
+-- random numbers. We can obtain a pseudo-random number generator that
+-- is seeded using the system clock using the
+-- 'System.Random.Mersenne.Pure64.newPureMT' function (please refer to
+-- the documentation of 'System.Random.Mersenne.Pure64' for more
+-- information):
+--
+-- > prng <- newPureMT
+--
+-- Suppose that we have the samples 's1' and 's2'. We could now perform
+-- a Two-Tailed randomization test with 10,000 shuffles and the mean
+-- difference as the test statistic, by running 'approxRandTest' in the 'Rand'
+-- monad (at the /p = 0.01/ level):
+--
+-- > evalRandom (approxRandTest TwoSided meanDifference 10000 0.01 s1 s2) prng
+--
+-- It is also possible to obtain the test scores of the shuffled samples
+-- directly (e.g. to inspect the distribution of test scores) using the
+-- 'approxRandScores'/'approxRandPiarScores' functions:
+--
+-- > evalRandom (approxRandScores meanDifference 10000 0.01 s1 s2) prng
 
 -- | Computations with random numbers that can fail.
 type RandWithError a = ErrorT String Rand a
