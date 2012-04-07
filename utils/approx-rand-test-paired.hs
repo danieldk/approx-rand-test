@@ -15,7 +15,6 @@ import           Control.Exception.Base (Exception)
 import           Control.Monad (liftM, when)
 import           Control.Monad.Error (runErrorT)
 import           Control.Monad.Mersenne.Random (evalRandom)
-import           Control.Monad.Trans.Resource (ResourceThrow (..))
 import           Data.Conduit (($$), ($=)) 
 import qualified Data.Conduit as C
 import qualified Data.Conduit.Binary as CB
@@ -41,7 +40,7 @@ data ReadException =
 
 instance Exception ReadException
 
-readFileCol :: C.ResourceIO m => String -> Int -> m [Double]
+readFileCol :: String -> Int -> IO [Double]
 readFileCol fn col =
   liftM reverse $ C.runResourceT (
     CB.sourceFile fn $=
@@ -52,10 +51,10 @@ readFileCol fn col =
     toDouble $$
     CL.consume )
 
-toDouble :: ResourceThrow m => C.Conduit T.Text m Double
+toDouble :: C.MonadThrow m => C.Conduit T.Text m Double
 toDouble = CL.mapM $ \v ->
   case TR.double v of
-    Left err     -> resourceThrow $ DoubleConversionException err
+    Left err     -> C.monadThrow $ DoubleConversionException err
     Right (d, _) -> return $ d
 
 main :: IO ()
