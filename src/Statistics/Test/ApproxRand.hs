@@ -125,7 +125,7 @@ data TestResult =
 approxRandPairTest ::
      TestType                 -- ^ Type of test ('OneTailed' or 'TwoTailed')
   -> TestStatistic            -- ^ Test statistic
-  -> Int                      -- ^ Number of sample permutations to create
+  -> Int                      -- ^ Number of shuffled samples to create
   -> Double                   -- ^ The p-value at which to test (e.g. 0.05)
   -> Sample                   -- ^ First sample
   -> Sample                   -- ^ Second sample
@@ -141,39 +141,62 @@ approxRandPairTest testType stat n pTest s1 s2 =
 --
 -- In approximate randomization tests, the values of two samples are
 -- shuffled among those samples. A test statistic is calculated for
--- the original samples and the permutations, to detect whether the
+-- the original samples and the shuffled samples, to detect whether the
 -- difference of the samples is extreme or not.
 approxRandTest ::
-     TestType
-  -> TestStatistic
-  -> Int
-  -> Double
-  -> Sample
-  -> Sample
-  -> Rand TestResult
+     TestType        -- ^ Type of test ('OneTailed' or 'TwoTailed')
+  -> TestStatistic   -- ^ Test statistic
+  -> Int             -- ^ Number of shuffled sample to create
+  -> Double          -- ^ The p-value at which to test (e.g. 0.05)
+  -> Sample          -- ^ First sample
+  -> Sample          -- ^ Second sample
+  -> Rand TestResult -- ^ The test result
 approxRandTest testType stat n pTest s1 s2 =
   (significance testType pTest n . countExtremes tOrig) `liftM`
     approxRandScores stat n s1 s2
   where
     tOrig = stat s1 s2
 
-significance :: TestType -> Double -> Int -> (Int, Int) -> TestResult
+-- | Determine the significance.
+significance ::
+     TestType   -- ^ Type of test ('OneTailed' or 'TwoTailed')
+  -> Double     -- ^ The p-value at which to test (e.g. 0.05)
+  -> Int        -- ^ Number of sample shuffles
+  -> (Int, Int) -- ^ Extreme score counts
+  -> TestResult -- ^ The test result
 significance TwoTailed pTest n =
   significant (pTest / 2) . pValue n . (uncurry min) 
 significance OneTailed pTest n =
   significant pTest . pValue n . snd
 
-significant :: Double -> Double -> TestResult
+-- | Wrap a p-value in a 'TestResult'.
+significant ::
+     Double     -- ^ The p-value at which to test
+  -> Double     -- ^ The p-value
+  -> TestResult -- ^ The test result
 significant pTail p =
   if p < pTail then Significant p else NotSignificant p
 
-pValue :: Int -> Int -> Double
+-- | Calculate a p-value
+pValue ::
+     Int    -- ^ Number of extreme scores
+  -> Int    -- ^ Number of shuffles
+  -> Double -- ^ The p-value
 pValue n r = ((fromIntegral r) + 1) / ((fromIntegral n) + 1)
 
+-- |
+-- Count extreme test statistic values. If the test statistic value of the
+-- original sample is in the right tail, we want to count values equal to
+-- or larger than that value. If the value is in the left tail, we want to
+-- count value smaller than or equal to that value. Since we do not know
+-- the tail (yet), we count both.
+--
+-- Note: we can determine the tail by (1) averaging the test scores of the
+-- randomized samples, or (2) taking the smaller of the two counts.
 countExtremes ::
-     Double
-  -> [Double]
-  -> (Int, Int)
+     Double     -- ^ Test statistic value of the original samples
+  -> [Double]   -- ^ Test statistic values of the randomized samples.
+  -> (Int, Int) -- ^ Count of left- and right-tail extremes.
 countExtremes tOrig =
   foldl' count (0, 0)
   where
@@ -183,25 +206,25 @@ countExtremes tOrig =
         (newLeft, newRight)
 
 -- |
--- Generate a given number of pairwise sample permutations, and calculate
--- the test score for each permutation.
+-- Generate a given number of pairwise shuffled samples, and calculate
+-- the test score for each shuffle.
 --
 -- Since the scores at a given index are swapped (with a probability of
 -- 0.5), the samples should have the same length.
 approxRandPairScores ::
      TestStatistic          -- ^ Test statistic
-  -> Int                    -- ^ Number of sample permutations to create
+  -> Int                    -- ^ Number of shuffled samples to create
   -> Sample                 -- ^ First sample
   -> Sample                 -- ^ Second sample
-  -> RandWithError [Double] -- ^ The scores of each permutation
+  -> RandWithError [Double] -- ^ The scores of each shuffle
 approxRandPairScores stat n s1 s2 = do
   when (VG.length s1 /= VG.length s2) $
     throwError "Cannot calculate pairwise scores: samples have different sizes"
-  lift $ replicateM n $ (uncurry stat) `liftM` permuteVectors s1 s2
+  lift $ replicateM n $ (uncurry stat) `liftM` shuffleVectorsPairwise s1 s2
 
 -- |
--- Generate a given number of sample permutations, and calculate the test
--- score for each permutation.
+-- Generate a given number of shuffled samples, and calculate the test
+-- score for each shuffle.
 --
 -- This function does not require the samples to have an equal length.
 approxRandScores ::
@@ -213,10 +236,10 @@ approxRandScores ::
 approxRandScores stat n s1 s2 =
   replicateM n $ uncurry stat `liftM` shuffleVectors s1 s2
 
--- | Permute two vectors.
-permuteVectors :: (VG.Vector v a, VG.Vector v Bool) =>
+-- | Pair-wise shuffle of two vectors.
+shuffleVectorsPairwise :: (VG.Vector v a, VG.Vector v Bool) =>
   v a -> v a -> Rand (v a, v a)
-permuteVectors vec1 vec2 = do
+shuffleVectorsPairwise vec1 vec2 = do
   randomVec <- randomVector (VG.length vec1)
   let pv1 = VG.zipWith3 permute vec1 vec2 randomVec
   let pv2 = VG.zipWith3 permute vec2 vec1 randomVec
@@ -270,20 +293,19 @@ differenceMean :: TestStatistic
 differenceMean v1 v2 =
   (VG.sum $ subVector v1 v2) / (fromIntegral $ VG.length v1)
 
--- |
--- Calculates the mean difference of two samples (/mean(s1) - mean(s2)/).
+-- | Calculates the mean difference of two samples (/mean(s1) - mean(s2)/).
 meanDifference :: TestStatistic
 meanDifference s1 s2 =
   (mean s1) - (mean s2)
 
+-- | Calculate the mean of a sample.
 mean :: Sample -> Double
 mean = do
   t <- VG.sum
   l <- VG.length
   return $ t / fromIntegral l
 
--- |
--- Calculate the ratio of sample variances (/var(s1) : var(s2)/)
+-- | Calculate the ratio of sample variances (/var(s1) : var(s2)/).
 varianceRatio :: TestStatistic
 varianceRatio v1 v2 =
   (variance v1) / (variance v2)
@@ -291,8 +313,6 @@ varianceRatio v1 v2 =
 -- | Subtract two vectors.
 subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
 subVector = VG.zipWith (-)
-
--- Generate Int numbers within a range
 
 subIIW :: Int -> Int -> Word
 subIIW a b = fromIntegral a - fromIntegral b
@@ -302,6 +322,7 @@ addIWI :: Int -> Word -> Int
 addIWI a b = a + fromIntegral b
 {-# INLINE addIWI #-}
 
+-- | Generate Int numbers within a range
 randomIntR :: PureMT -> (Int, Int) -> (Int, PureMT)
 randomIntR gen (a, b)
   | n == 0    = randomInt gen
