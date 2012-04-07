@@ -21,6 +21,10 @@ module Statistics.Test.ApproxRand (
   -- * Examples
   -- $examples
 
+  -- * Data types
+  TestResult(..),
+  RandWithError,
+
   -- * Approximate randomization tests
   approxRandTest,
   approxRandScores,
@@ -32,11 +36,7 @@ module Statistics.Test.ApproxRand (
   TestStatistic,
   differenceMean,
   meanDifference,
-  varianceRatio,
-
-  -- * Data types
-  TestResult(..),
-  RandWithError
+  varianceRatio
 ) where
 
 import           Prelude hiding ((++))
@@ -228,11 +228,11 @@ approxRandPairScores stat n s1 s2 = do
 --
 -- This function does not require the samples to have an equal length.
 approxRandScores ::
-     TestStatistic
-  -> Int
-  -> Sample
-  -> Sample
-  -> Rand [Double]
+     TestStatistic -- ^ Test statistic
+  -> Int           -- ^ Number of shuffled samples to create
+  -> Sample        -- ^ First sample
+  -> Sample        -- ^ Second sample
+  -> Rand [Double] -- ^ The scores of each shuffle
 approxRandScores stat n s1 s2 =
   replicateM n $ uncurry stat `liftM` shuffleVectors s1 s2
 
