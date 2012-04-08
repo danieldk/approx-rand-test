@@ -165,7 +165,7 @@ significance ::
   -> (Int, Int) -- ^ Extreme score counts
   -> TestResult -- ^ The test result
 significance TwoTailed pTest n =
-  significant (pTest / 2) . pValue n . (uncurry min) 
+  significant (pTest / 2) . pValue n . uncurry min
 significance OneTailed pTest n =
   significant pTest . pValue n . snd
 
@@ -182,7 +182,7 @@ pValue ::
      Int    -- ^ Number of extreme scores
   -> Int    -- ^ Number of shuffles
   -> Double -- ^ The p-value
-pValue n r = ((fromIntegral r) + 1) / ((fromIntegral n) + 1)
+pValue n r = (fromIntegral r + 1) / (fromIntegral n + 1)
 
 -- |
 -- Count extreme test statistic values. If the test statistic value of the
@@ -220,7 +220,7 @@ approxRandPairScores ::
 approxRandPairScores stat n s1 s2 = do
   when (VG.length s1 /= VG.length s2) $
     throwError "Cannot calculate pairwise scores: samples have different sizes"
-  lift $ replicateM n $ (uncurry stat) `liftM` shuffleVectorsPairwise s1 s2
+  lift $ replicateM n $ uncurry stat `liftM` shuffleVectorsPairwise s1 s2
 
 -- |
 -- Generate a given number of shuffled samples, and calculate the test
@@ -291,12 +291,12 @@ type TestStatistic = Sample -> Sample -> Double
 -- longer vector are ignored.
 differenceMean :: TestStatistic
 differenceMean v1 v2 =
-  (VG.sum $ subVector v1 v2) / (fromIntegral $ VG.length v1)
+  VG.sum (subVector v1 v2) / fromIntegral (VG.length v1)
 
 -- | Calculates the mean difference of two samples (/mean(s1) - mean(s2)/).
 meanDifference :: TestStatistic
 meanDifference s1 s2 =
-  (mean s1) - (mean s2)
+  mean s1 - mean s2
 
 -- | Calculate the mean of a sample.
 mean :: Sample -> Double
@@ -308,7 +308,7 @@ mean = do
 -- | Calculate the ratio of sample variances (/var(s1) : var(s2)/).
 varianceRatio :: TestStatistic
 varianceRatio v1 v2 =
-  (variance v1) / (variance v2)
+  variance v1 / variance v2
 
 -- | Subtract two vectors.
 subVector :: (VG.Vector v n, Num n) => v n -> v n -> v n
@@ -332,7 +332,7 @@ randomIntR gen (a, b)
     -- Number of different Ints that should be generated
     n = 1 + subIIW b' a'
     -- The total range of Word can hold x complete n ranges
-    x = (maxBound `div` n)
+    x = maxBound `div` n
     -- Pick from a range the is dividable by n without remainders
     s = x * n
     loop gen'

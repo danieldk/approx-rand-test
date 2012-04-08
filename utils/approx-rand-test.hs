@@ -54,7 +54,7 @@ toDouble :: C.MonadThrow m => C.Conduit T.Text m Double
 toDouble = CL.mapM $ \v ->
   case TR.double v of
     Left err     -> C.monadThrow $ DoubleConversionException err
-    Right (d, _) -> return $ d
+    Right (d, _) -> return d
 
 main :: IO ()
 main = do
@@ -63,7 +63,7 @@ main = do
 
   -- Read score files
   let col = pred $ optColumn opts
-  v1 <- liftM V.fromList $ readFileCol (args !! 0) col
+  v1 <- liftM V.fromList $ readFileCol (head args) col
   v2 <- liftM V.fromList $ readFileCol (args !! 1) col
 
   let stat = optTestStatistic opts
@@ -97,8 +97,8 @@ applyTest opts stat prng v1 v2 = do
 
   -- Test information
   putStrLn $ "Test type: " ++ show testType
-  putStrLn $ printf "Test significance: %f" $ pTest
-  putStrLn $ printf "Tail significance: %f" $ pTail
+  putStrLn $ printf "Test significance: %f" pTest
+  putStrLn $ printf "Tail significance: %f" pTail
 
   -- Approximate randomization testing.
   let test = approxRandTest testType stat (optIterations opts) pTest v1 v2
