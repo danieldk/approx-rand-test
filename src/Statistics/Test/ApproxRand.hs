@@ -12,7 +12,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UnboxedTuples #-}
 
 module Statistics.Test.ApproxRand (
   -- * Description
@@ -328,7 +327,7 @@ randomIntR gen (a, b)
   | n == 0    = randomInt gen
   | otherwise = loop gen
   where
-    (# a', b' #) = if a < b then (# a, b #) else (# b, a #)
+    (a', b') = if a < b then (a, b) else (b, a)
     -- Number of different Ints that should be generated
     n = 1 + subIIW b' a'
     -- The total range of Word can hold x complete n ranges
