@@ -21,7 +21,7 @@ one-sided tests).
 
 Install the necessary dependencies, and run:
 
-  cabal install
+    cabal install
 
 ## Usage
 
