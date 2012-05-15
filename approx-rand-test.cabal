@@ -12,6 +12,15 @@ Description:   Utility to perform approximate randomization tests.
 Cabal-Version: >= 1.8
 Build-Type:    Simple
 
+Source-Repository head
+  Type:     git
+  Location: git://github.com/danieldk/approx-rand-test.git
+
+Source-Repository this
+  Type:     git
+  Location: git://github.com/danieldk/approx-rand-test.git
+  Tag:      0.0.3
+
 Library
   HS-Source-Dirs:  src
   Ghc-Options:     -O2 -Wall
