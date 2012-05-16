@@ -7,22 +7,13 @@
 --
 -- Approximate randomization test (Noreen, 1989)
 
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DoAndIfThenElse #-}
 
-import           Control.Exception.Base (Exception)
+module Main where
+
 import           Control.Monad (liftM, when)
 import           Control.Monad.Error (runErrorT)
 import           Control.Monad.Mersenne.Random (evalRandom)
-import           Data.Conduit (($$), ($=)) 
-import qualified Data.Conduit as C
-import qualified Data.Conduit.Binary as CB
-import qualified Data.Conduit.List as CL
-import qualified Data.Conduit.Text as CT
-import qualified Data.Text as T
-import qualified Data.Text.Read as TR
-import           Data.Typeable (Typeable)
 import qualified Data.Vector.Unboxed as V
 import           Data.Word (Word64)
 import           Statistics.Test.ApproxRand
@@ -34,28 +25,7 @@ import           System.Exit (exitFailure)
 import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
-data ReadException =
-  DoubleConversionException String
-  deriving (Show, Typeable)
-
-instance Exception ReadException
-
-readFileCol :: String -> Int -> IO [Double]
-readFileCol fn col =
-  liftM reverse $ C.runResourceT (
-    CB.sourceFile fn $=
-    CB.lines $=
-    CT.decode CT.utf8 $=
-    CL.map (T.split (== ' ')) $=
-    CL.map (!! col) $=
-    toDouble $$
-    CL.consume )
-
-toDouble :: C.MonadThrow m => C.Conduit T.Text m Double
-toDouble = CL.mapM $ \v ->
-  case TR.double v of
-    Left err     -> C.monadThrow $ DoubleConversionException err
-    Right (d, _) -> return d
+import           SampleIO
 
 main :: IO ()
 main = do
