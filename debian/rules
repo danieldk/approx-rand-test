@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+DEB_CABAL_PACKAGE = approx-rand-test
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/hlibrary.mk
+
+build/approx-rand-test:: build-ghc-stamp
+binary-fixup/approx-rand-test::
+	install -m 755 -s -D dist-ghc/build/approx_rand_test_paired/approx_rand_test_paired debian/approx-rand-test/usr/bin/approx_rand_test_paired || true
+	install -m 755 -s -D dist-ghc/build/approx_rand_test/approx_rand_test debian/approx-rand-test/usr/bin/approx_rand_test || true
+
