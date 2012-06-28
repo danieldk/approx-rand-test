@@ -14,7 +14,7 @@
 --
 --  * /Bonferroni and Šidák corrections for multiple comparisons, H. Abdi, 2007, in: N.J. Salkind (ed.), Encyclopedia of Measurement and Statistics, Thousand Oaks, CA: Sage/
 
-module Statistics.Test.Corrections (
+module Statistics.Test.Correction (
   sidak,
   bonferroni
 ) where
