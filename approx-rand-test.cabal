@@ -24,7 +24,7 @@ Source-Repository this
 Library
   HS-Source-Dirs:  src
   Ghc-Options:     -O2 -Wall
-  Exposed-modules: Statistics.Test.ApproxRand
+  Exposed-modules: Statistics.Test.ApproxRand, Statistics.Test.Correction
   Build-Depends:   base >= 4 && < 5, vector == 0.9.*,
                    mersenne-random-pure64 == 0.2.0.*,
                    monad-mersenne-random == 0.1,
