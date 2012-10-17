@@ -28,7 +28,7 @@ Library
   Build-Depends:   base >= 4 && < 5, vector == 0.9.*,
                    mersenne-random-pure64 == 0.2.0.*,
                    monad-mersenne-random == 0.1,
-                   mtl == 2.1.*, statistics == 0.10.1.*,
+                   mtl == 2.1.*, statistics == 0.10.*,
                    transformers == 0.3.*
 
 
@@ -38,12 +38,11 @@ Executable approx_rand_test
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
-                  conduit == 0.4.*, text == 0.11.2.*,
+                  conduit == 0.5.*, text == 0.11.2.*,
                   vector == 0.9.*,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1,
-                  resourcet == 0.3.*,
-                  statistics == 0.10.1.*
+                  statistics == 0.10.*
 
 
 Executable approx_rand_test_paired
@@ -52,12 +51,11 @@ Executable approx_rand_test_paired
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
-                  conduit == 0.4.*, text == 0.11.2.*,
+                  conduit == 0.5.*, text == 0.11.2.*,
                   vector == 0.9.*,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1,
-                  mtl == 2.1.*, resourcet == 0.3.*,
-                  statistics == 0.10.1.*
+                  mtl == 2.1.*, statistics == 0.10.*
 
 Test-Suite tests
   Type:           exitcode-stdio-1.0
