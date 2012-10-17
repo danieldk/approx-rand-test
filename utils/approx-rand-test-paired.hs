@@ -76,8 +76,8 @@ applyTest opts stat prng v1 v2 = do
   let result = evalRandom test prng
   case result of
     Left  err                -> putStrLn err
-    Right (Significant    p) -> putStrLn $ printf "Significant: %f" p
-    Right (NotSignificant p) -> putStrLn $ printf "Not significant: %f" p
+    Right (TestResult Significant    p) -> putStrLn $ printf "Significant: %f" p
+    Right (TestResult NotSignificant p) -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()

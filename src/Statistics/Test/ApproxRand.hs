@@ -21,6 +21,7 @@ module Statistics.Test.ApproxRand (
   -- $examples
 
   -- * Data types
+  Significance(..),
   TestResult(..),
   RandWithError,
 
@@ -110,9 +111,16 @@ type RandWithError a = ErrorT String Rand a
 
 -- |
 -- The result of hypothesis testing.
-data TestResult =
-    Significant Double     -- ^ The null hypothesis should be rejected
-  | NotSignificant Double  -- ^ Data is compatible with the null hypothesis
+data TestResult = TestResult {
+    trSignificance :: Significance, -- ^ Significance
+    trPValue       :: Double        -- ^ p-value
+  } deriving (Eq, Ord, Show)
+
+-- |
+-- Significance.
+data Significance =
+    Significant    -- ^ The null hypothesis should be rejected
+  | NotSignificant -- ^ Data is compatible with the null hypothesis
   deriving (Eq, Ord, Show)
 
 -- |
@@ -174,7 +182,7 @@ significant ::
   -> Double     -- ^ The p-value
   -> TestResult -- ^ The test result
 significant pTail p =
-  if p < pTail then Significant p else NotSignificant p
+  if p < pTail then TestResult Significant p else TestResult NotSignificant p
 
 -- | Calculate a p-value
 pValue ::

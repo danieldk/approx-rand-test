@@ -74,8 +74,8 @@ applyTest opts stat prng v1 v2 = do
   let test = approxRandTest testType stat (optIterations opts) pTest v1 v2
   let result = evalRandom test prng
   case result of
-    Significant    p -> putStrLn $ printf "Significant: %f" p
-    NotSignificant p -> putStrLn $ printf "Not significant: %f" p
+    TestResult Significant    p -> putStrLn $ printf "Significant: %f" p
+    TestResult NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
