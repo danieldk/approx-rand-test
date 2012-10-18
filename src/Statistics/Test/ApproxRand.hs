@@ -98,7 +98,7 @@ import           System.Random.Mersenne.Pure64 (PureMT, randomInt, randomWord)
 -- difference as the test statistic, by running 'approxRandTest' in the 'Rand'
 -- monad (at the /p = 0.01/ level):
 --
--- > evalRandom (approxRandTest TwoSided meanDifference 10000 0.01 s1 s2) prng
+-- > evalRandom (approxRandTest TwoTailed meanDifference 10000 0.01 s1 s2) prng
 --
 -- It is also possible to obtain the test scores of the shuffled samples
 -- directly (e.g. to inspect the distribution of test scores) using the
