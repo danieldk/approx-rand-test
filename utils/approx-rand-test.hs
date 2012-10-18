@@ -13,6 +13,7 @@ module Main where
 
 import           Control.Monad (liftM, when)
 import           Control.Monad.Mersenne.Random (evalRandom)
+import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Unboxed as V
 import           Data.Word (Word64)
 import           Statistics.Test.ApproxRand
@@ -54,10 +55,6 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
   putStrLn $ printf "Sample sizes: %d %d" (V.length v1) (V.length v2)
 
-  -- Calculate test statistic for original score sets.
-  let tOrig = stat v1 v2
-  putStrLn $ printf "Test statistic: %f" tOrig
-
   let testType = optTestType opts
 
   let pTest = optSigP opts
@@ -73,14 +70,18 @@ applyTest opts stat prng v1 v2 = do
   -- Approximate randomization testing.
   let test = approxRandTest testType stat (optIterations opts) pTest v1 v2
   let result = evalRandom test prng
-  case result of
-    TestResult Significant    p -> putStrLn $ printf "Significant: %f" p
-    TestResult NotSignificant p -> putStrLn $ printf "Not significant: %f" p
+
+  -- Print test statistic for the samples.
+  putStrLn $ printf "Test statistic: %f" $ trScore result
+
+  case trSignificance result of
+    Significant    p -> putStrLn $ printf "Significant: %f" p
+    NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 printScores opts stat prng v1 v2 =
-  mapM_ (putStrLn . printf "%f") $
+  VG.mapM_ (putStrLn . printf "%f") $
     evalRandom (approxRandScores stat (optIterations opts) v1 v2) prng
 
 data Options = Options {

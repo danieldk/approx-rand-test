@@ -21,8 +21,8 @@ module Statistics.Test.ApproxRand (
   -- $examples
 
   -- * Data types
-  Significance(..),
   TestResult(..),
+  Significance(..),
   RandWithError,
 
   -- * Approximate randomization tests
@@ -46,7 +46,6 @@ import           Control.Monad.Error.Class (throwError)
 import           Control.Monad.Mersenne.Random (R(..), Rand(..), getBool)
 import           Control.Monad.ST (runST)
 import           Control.Monad.Trans.Class (lift)
-import           Data.List (foldl')
 import           Data.Vector.Generic ((++))
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as GM
@@ -112,15 +111,17 @@ type RandWithError a = ErrorT String Rand a
 -- |
 -- The result of hypothesis testing.
 data TestResult = TestResult {
-    trSignificance :: Significance, -- ^ Significance
-    trPValue       :: Double        -- ^ p-value
+    trSignificance     :: Significance, -- ^ Significance
+    trScore            :: Double,       -- ^ Test statistic for the samples
+    trRandomizedScores :: Sample        -- ^ Test statistics for the
+                                        --   randomized samples
   } deriving (Eq, Ord, Show)
 
 -- |
 -- Significance.
 data Significance =
-    Significant    -- ^ The null hypothesis should be rejected
-  | NotSignificant -- ^ Data is compatible with the null hypothesis
+    Significant    Double -- ^ The null hypothesis should be rejected
+  | NotSignificant Double -- ^ Data is compatible with the null hypothesis
   deriving (Eq, Ord, Show)
 
 -- |
@@ -137,11 +138,11 @@ approxRandPairTest ::
   -> Sample                   -- ^ First sample
   -> Sample                   -- ^ Second sample
   -> RandWithError TestResult -- ^ The test result
-approxRandPairTest testType stat n pTest s1 s2 =
-  (significance testType pTest n . countExtremes tOrig) `liftM`
-    approxRandPairScores stat n s1 s2
-  where
-    tOrig = stat s1 s2
+approxRandPairTest testType stat n pTest s1 s2 = do
+  scores <- approxRandPairScores stat n s1 s2
+  let tOrig = stat s1 s2
+  let sig = significance testType pTest n $ countExtremes tOrig $ scores
+  return $ TestResult sig tOrig scores
 
 -- |
 -- Apply an approximate randomization test.
@@ -158,19 +159,19 @@ approxRandTest ::
   -> Sample          -- ^ First sample
   -> Sample          -- ^ Second sample
   -> Rand TestResult -- ^ The test result
-approxRandTest testType stat n pTest s1 s2 =
-  (significance testType pTest n . countExtremes tOrig) `liftM`
-    approxRandScores stat n s1 s2
-  where
-    tOrig = stat s1 s2
+approxRandTest testType stat n pTest s1 s2 = do
+  scores <- approxRandScores stat n s1 s2
+  let tOrig = stat s1 s2
+  let sig = significance testType pTest n $ countExtremes tOrig scores
+  return $ TestResult sig tOrig scores
 
 -- | Determine the significance.
 significance ::
-     TestType   -- ^ Type of test ('OneTailed' or 'TwoTailed')
-  -> Double     -- ^ The p-value at which to test (e.g. 0.05)
-  -> Int        -- ^ Number of sample shuffles
-  -> (Int, Int) -- ^ Extreme score counts
-  -> TestResult -- ^ The test result
+     TestType     -- ^ Type of test ('OneTailed' or 'TwoTailed')
+  -> Double       -- ^ The p-value at which to test (e.g. 0.05)
+  -> Int          -- ^ Number of sample shuffles
+  -> (Int, Int)   -- ^ Extreme score counts
+  -> Significance -- ^ The test result
 significance TwoTailed pTest n =
   significant (pTest / 2) . pValue n . uncurry min
 significance OneTailed pTest n =
@@ -178,11 +179,11 @@ significance OneTailed pTest n =
 
 -- | Wrap a p-value in a 'TestResult'.
 significant ::
-     Double     -- ^ The p-value at which to test
-  -> Double     -- ^ The p-value
-  -> TestResult -- ^ The test result
+     Double       -- ^ The p-value at which to test
+  -> Double       -- ^ The p-value
+  -> Significance -- ^ The test result
 significant pTail p =
-  if p < pTail then TestResult Significant p else TestResult NotSignificant p
+  if p < pTail then Significant p else NotSignificant p
 
 -- | Calculate a p-value
 pValue ::
@@ -202,10 +203,10 @@ pValue n r = (fromIntegral r + 1) / (fromIntegral n + 1)
 -- randomized samples, or (2) taking the smaller of the two counts.
 countExtremes ::
      Double     -- ^ Test statistic value of the original samples
-  -> [Double]   -- ^ Test statistic values of the randomized samples.
+  -> Sample     -- ^ Test statistic values of the randomized samples.
   -> (Int, Int) -- ^ Count of left- and right-tail extremes.
 countExtremes tOrig =
-  foldl' count (0, 0)
+  VG.foldl' count (0, 0)
   where
     count (left, right) tPerm =
       let !newLeft = if tPerm <= tOrig then succ left else left in
@@ -223,11 +224,12 @@ approxRandPairScores ::
   -> Int                    -- ^ Number of shuffled samples to create
   -> Sample                 -- ^ First sample
   -> Sample                 -- ^ Second sample
-  -> RandWithError [Double] -- ^ The scores of each shuffle
+  -> RandWithError Sample   -- ^ The scores of each shuffle
 approxRandPairScores stat n s1 s2 = do
   when (VG.length s1 /= VG.length s2) $
     throwError "Cannot calculate pairwise scores: samples have different sizes"
-  lift $ replicateM n $ uncurry stat `liftM` shuffleVectorsPairwise s1 s2
+  lift $ liftM VG.fromList $ replicateM n $
+    uncurry stat `liftM` shuffleVectorsPairwise s1 s2
 
 -- |
 -- Generate a given number of shuffled samples, and calculate the test
@@ -239,9 +241,9 @@ approxRandScores ::
   -> Int           -- ^ Number of shuffled samples to create
   -> Sample        -- ^ First sample
   -> Sample        -- ^ Second sample
-  -> Rand [Double] -- ^ The scores of each shuffle
+  -> Rand Sample   -- ^ The scores of each shuffle
 approxRandScores stat n s1 s2 =
-  replicateM n $ uncurry stat `liftM` shuffleVectors s1 s2
+  liftM VG.fromList $ replicateM n $ uncurry stat `liftM` shuffleVectors s1 s2
 
 -- | Pair-wise shuffle of two vectors.
 shuffleVectorsPairwise :: (VG.Vector v a, VG.Vector v Bool) =>

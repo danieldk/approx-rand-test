@@ -14,6 +14,7 @@ module Main where
 import           Control.Monad (liftM, when)
 import           Control.Monad.Error (runErrorT)
 import           Control.Monad.Mersenne.Random (evalRandom)
+import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Unboxed as V
 import           Data.Word (Word64)
 import           Statistics.Test.ApproxRand
@@ -55,10 +56,6 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
   putStrLn $ printf "Sample size: %d" $ V.length v1
 
-  -- Calculate test statistic for original score sets.
-  let tOrig = stat v1 v2
-  putStrLn $ printf "Test statistic: %f" tOrig
-
   let testType = optTestType opts
 
   let pTest = optSigP opts
@@ -71,13 +68,22 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Test significance: %f" pTest
   putStrLn $ printf "Tail significance: %f" pTail
 
-  -- Approximate randomization testing.
   let test = runErrorT $ approxRandPairTest testType stat (optIterations opts) pTest v1 v2
   let result = evalRandom test prng
+
   case result of
-    Left  err                -> putStrLn err
-    Right (TestResult Significant    p) -> putStrLn $ printf "Significant: %f" p
-    Right (TestResult NotSignificant p) -> putStrLn $ printf "Not significant: %f" p
+    Left  err -> putStrLn err
+    Right r   -> printResult r
+
+printResult :: TestResult -> IO ()
+printResult result = do
+  -- Print test statistic for the samples.
+  putStrLn $ printf "Test statistic: %f" $ trScore result
+
+  -- Print significance
+  case trSignificance result of
+    Significant    p -> putStrLn $ printf "Significant: %f" p
+    NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
 printScores :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
@@ -85,7 +91,7 @@ printScores opts stat prng v1 v2 = do
   let test = runErrorT $ approxRandPairScores stat (optIterations opts) v1 v2
   case evalRandom test prng of
     Left err     -> putStrLn err
-    Right scores -> mapM_ (putStrLn . printf "%f") scores
+    Right scores -> VG.mapM_ (putStrLn . printf "%f") scores
 
 data Options = Options {
   optColumn        :: Int,
