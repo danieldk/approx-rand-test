@@ -27,10 +27,10 @@ module Statistics.Test.ApproxRand (
 
   -- * Approximate randomization tests
   approxRandTest,
-  approxRandScores,
+  approxRandStats,
 
   approxRandPairTest,
-  approxRandPairScores,
+  approxRandPairStats,
 
   -- * Test statistics
   TestStatistic,
@@ -99,11 +99,11 @@ import           System.Random.Mersenne.Pure64 (PureMT, randomInt, randomWord)
 --
 -- > evalRandom (approxRandTest TwoTailed meanDifference 10000 0.01 s1 s2) prng
 --
--- It is also possible to obtain the test scores of the shuffled samples
--- directly (e.g. to inspect the distribution of test scores) using the
--- 'approxRandScores'/'approxRandPiarScores' functions:
+-- It is also possible to obtain the test statistics of the shuffled samples
+-- directly (e.g. to inspect the distribution of test statistics) using the
+-- 'approxRandStats'/'approxRandPiarStats' functions:
 --
--- > evalRandom (approxRandScores meanDifference 10000 0.01 s1 s2) prng
+-- > evalRandom (approxRandStats meanDifference 10000 0.01 s1 s2) prng
 
 -- | Computations with random numbers that can fail.
 type RandWithError a = ErrorT String Rand a
@@ -112,8 +112,8 @@ type RandWithError a = ErrorT String Rand a
 -- The result of hypothesis testing.
 data TestResult = TestResult {
     trSignificance     :: Significance, -- ^ Significance
-    trScore            :: Double,       -- ^ Test statistic for the samples
-    trRandomizedScores :: Sample        -- ^ Test statistics for the
+    trStat             :: Double,       -- ^ Test statistic for the samples
+    trRandomizedStats  :: Sample        -- ^ Test statistics for the
                                         --   randomized samples
   } deriving (Eq, Ord, Show)
 
@@ -127,7 +127,7 @@ data Significance =
 -- |
 -- Apply a pair-wise approximate randomization test.
 --
--- In pair-wise approximate randomization tests the scores at a given
+-- In pair-wise approximate randomization tests the data points at a given
 -- index are swapped between samples with a probability of 0.5. Since
 -- swapping is pairwise, the samples should have the same length.
 approxRandPairTest ::
@@ -139,10 +139,10 @@ approxRandPairTest ::
   -> Sample                   -- ^ Second sample
   -> RandWithError TestResult -- ^ The test result
 approxRandPairTest testType stat n pTest s1 s2 = do
-  scores <- approxRandPairScores stat n s1 s2
+  stats <- approxRandPairStats stat n s1 s2
   let tOrig = stat s1 s2
-  let sig = significance testType pTest n $ countExtremes tOrig $ scores
-  return $ TestResult sig tOrig scores
+  let sig = significance testType pTest n $ countExtremes tOrig $ stats
+  return $ TestResult sig tOrig stats
 
 -- |
 -- Apply an approximate randomization test.
@@ -160,17 +160,17 @@ approxRandTest ::
   -> Sample          -- ^ Second sample
   -> Rand TestResult -- ^ The test result
 approxRandTest testType stat n pTest s1 s2 = do
-  scores <- approxRandScores stat n s1 s2
+  stats <- approxRandStats stat n s1 s2
   let tOrig = stat s1 s2
-  let sig = significance testType pTest n $ countExtremes tOrig scores
-  return $ TestResult sig tOrig scores
+  let sig = significance testType pTest n $ countExtremes tOrig stats
+  return $ TestResult sig tOrig stats
 
 -- | Determine the significance.
 significance ::
      TestType     -- ^ Type of test ('OneTailed' or 'TwoTailed')
   -> Double       -- ^ The p-value at which to test (e.g. 0.05)
   -> Int          -- ^ Number of sample shuffles
-  -> (Int, Int)   -- ^ Extreme score counts
+  -> (Int, Int)   -- ^ Extreme statistic counts
   -> Significance -- ^ The test result
 significance TwoTailed pTest n =
   significant (pTest / 2) . pValue n . uncurry min
@@ -187,7 +187,7 @@ significant pTail p =
 
 -- | Calculate a p-value
 pValue ::
-     Int    -- ^ Number of extreme scores
+     Int    -- ^ Number of extreme outcomes
   -> Int    -- ^ Number of shuffles
   -> Double -- ^ The p-value
 pValue n r = (fromIntegral r + 1) / (fromIntegral n + 1)
@@ -199,8 +199,8 @@ pValue n r = (fromIntegral r + 1) / (fromIntegral n + 1)
 -- count value smaller than or equal to that value. Since we do not know
 -- the tail (yet), we count both.
 --
--- Note: we can determine the tail by (1) averaging the test scores of the
--- randomized samples, or (2) taking the smaller of the two counts.
+-- Note: we can determine the tail by (1) averaging the test statistics of
+-- the randomized samples, or (2) taking the smaller of the two counts.
 countExtremes ::
      Double     -- ^ Test statistic value of the original samples
   -> Sample     -- ^ Test statistic values of the randomized samples.
@@ -215,34 +215,34 @@ countExtremes tOrig =
 
 -- |
 -- Generate a given number of pairwise shuffled samples, and calculate
--- the test score for each shuffle.
+-- the test statistic for each shuffle.
 --
--- Since the scores at a given index are swapped (with a probability of
+-- Since the data points at a given index are swapped (with a probability of
 -- 0.5), the samples should have the same length.
-approxRandPairScores ::
+approxRandPairStats ::
      TestStatistic          -- ^ Test statistic
   -> Int                    -- ^ Number of shuffled samples to create
   -> Sample                 -- ^ First sample
   -> Sample                 -- ^ Second sample
-  -> RandWithError Sample   -- ^ The scores of each shuffle
-approxRandPairScores stat n s1 s2 = do
+  -> RandWithError Sample   -- ^ The statistics of the shuffles
+approxRandPairStats stat n s1 s2 = do
   when (VG.length s1 /= VG.length s2) $
-    throwError "Cannot calculate pairwise scores: samples have different sizes"
+    throwError "Cannot calculate pairwise statistic: samples have different sizes"
   lift $ liftM VG.fromList $ replicateM n $
     uncurry stat `liftM` shuffleVectorsPairwise s1 s2
 
 -- |
 -- Generate a given number of shuffled samples, and calculate the test
--- score for each shuffle.
+-- statistic for each shuffle.
 --
 -- This function does not require the samples to have an equal length.
-approxRandScores ::
+approxRandStats ::
      TestStatistic -- ^ Test statistic
   -> Int           -- ^ Number of shuffled samples to create
   -> Sample        -- ^ First sample
   -> Sample        -- ^ Second sample
-  -> Rand Sample   -- ^ The scores of each shuffle
-approxRandScores stat n s1 s2 =
+  -> Rand Sample   -- ^ The statistics of the shuffles
+approxRandStats stat n s1 s2 =
   liftM VG.fromList $ replicateM n $ uncurry stat `liftM` shuffleVectors s1 s2
 
 -- | Pair-wise shuffle of two vectors.

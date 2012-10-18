@@ -44,8 +44,8 @@ main = do
     Just seed -> return $ pureMT seed
     Nothing   -> newPureMT
 
-  if optPrintScores opts then
-    printScores opts stat prng v1 v2
+  if optPrintStats opts then
+    printStats opts stat prng v1 v2
   else
     applyTest opts stat prng v1 v2
 
@@ -78,17 +78,17 @@ applyTest opts stat prng v1 v2 = do
 printResult :: TestResult -> IO ()
 printResult result = do
   -- Print test statistic for the samples.
-  putStrLn $ printf "Test statistic: %f" $ trScore result
+  putStrLn $ printf "Test statistic: %f" $ trStat result
 
   -- Print significance
   case trSignificance result of
     Significant    p -> putStrLn $ printf "Significant: %f" p
     NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
-printScores :: Options -> TestStatistic -> PureMT -> Sample ->
+printStats :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
-printScores opts stat prng v1 v2 = do
-  let test = runErrorT $ approxRandPairScores stat (optIterations opts) v1 v2
+printStats opts stat prng v1 v2 = do
+  let test = runErrorT $ approxRandPairStats stat (optIterations opts) v1 v2
   case evalRandom test prng of
     Left err     -> putStrLn err
     Right scores -> VG.mapM_ (putStrLn . printf "%f") scores
@@ -97,7 +97,7 @@ data Options = Options {
   optColumn        :: Int,
   optIterations    :: Int,
   optPRNGSeed      :: Maybe Word64,
-  optPrintScores   :: Bool,
+  optPrintStats    :: Bool,
   optSigP          :: Double,
   optTestStatistic :: TestStatistic,
   optTestType      :: TestType
@@ -108,7 +108,7 @@ defaultOptions = Options {
   optColumn        = 1,
   optIterations    = 10000,
   optPRNGSeed      = Nothing,
-  optPrintScores   = False,
+  optPrintStats    = False,
   optSigP          = 0.01,
   optTestStatistic = differenceMean,
   optTestType      = TwoTailed
@@ -128,9 +128,9 @@ options =
     Option ['p'] []
       (ReqArg (\arg opt -> opt {optSigP = read arg }) "NUMBER")
       "significant p-value",
-    Option []    ["print-scores"]
-      (NoArg (\opt -> opt { optPrintScores = True }))
-      "output scores of permuted vectors",
+    Option []    ["print-statistics"]
+      (NoArg (\opt -> opt { optPrintStats = True }))
+      "output test statistics of permuted vectors",
     Option ['s'] ["seed"]
       (ReqArg (\arg opt -> opt { optPRNGSeed = Just $ read arg}) "NUMBER")
       "pseudorandom number generator seed",

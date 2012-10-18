@@ -43,8 +43,8 @@ main = do
     Just seed -> return $ pureMT seed
     Nothing   -> newPureMT
 
-  if optPrintScores opts then
-    printScores opts stat prng v1 v2
+  if optPrintStats opts then
+    printStats opts stat prng v1 v2
   else
     applyTest opts stat prng v1 v2
 
@@ -72,23 +72,23 @@ applyTest opts stat prng v1 v2 = do
   let result = evalRandom test prng
 
   -- Print test statistic for the samples.
-  putStrLn $ printf "Test statistic: %f" $ trScore result
+  putStrLn $ printf "Test statistic: %f" $ trStat result
 
   case trSignificance result of
     Significant    p -> putStrLn $ printf "Significant: %f" p
     NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
-printScores :: Options -> TestStatistic -> PureMT -> Sample ->
+printStats :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
-printScores opts stat prng v1 v2 =
+printStats opts stat prng v1 v2 =
   VG.mapM_ (putStrLn . printf "%f") $
-    evalRandom (approxRandScores stat (optIterations opts) v1 v2) prng
+    evalRandom (approxRandStats stat (optIterations opts) v1 v2) prng
 
 data Options = Options {
   optColumn        :: Int,
   optIterations    :: Int,
   optPRNGSeed      :: Maybe Word64,
-  optPrintScores   :: Bool,
+  optPrintStats    :: Bool,
   optSigP          :: Double,
   optTestStatistic :: TestStatistic,
   optTestType      :: TestType
@@ -99,7 +99,7 @@ defaultOptions = Options {
   optColumn        = 1,
   optIterations    = 10000,
   optPRNGSeed      = Nothing,
-  optPrintScores   = False,
+  optPrintStats    = False,
   optSigP          = 0.01,
   optTestStatistic = meanDifference,
   optTestType      = TwoTailed
@@ -120,8 +120,8 @@ options =
       (ReqArg (\arg opt -> opt {optSigP = read arg }) "NUMBER")
       "significant p-value",
     Option []    ["print-scores"]
-      (NoArg (\opt -> opt { optPrintScores = True }))
-      "output scores of permuted vectors",
+      (NoArg (\opt -> opt { optPrintStats = True }))
+      "output statistics of permuted vectors",
     Option ['s'] ["seed"]
       (ReqArg (\arg opt -> opt { optPRNGSeed = Just $ read arg}) "NUMBER")
       "pseudorandom number generator seed",
