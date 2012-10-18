@@ -1,5 +1,5 @@
 Name:          approx-rand-test
-Version:       0.0.4
+Version:       0.1.0
 License:       OtherLicense
 License-file:  LICENSE
 Copyright:     Copyright 2012 Daniël de Kok
@@ -19,7 +19,7 @@ Source-Repository head
 Source-Repository this
   Type:     git
   Location: git://github.com/danieldk/approx-rand-test.git
-  Tag:      0.0.4
+  Tag:      0.1.0
 
 Library
   HS-Source-Dirs:  src
