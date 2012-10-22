@@ -25,6 +25,7 @@ import           System.Exit (exitFailure)
 import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
+import           Histogram
 import           SampleIO
 
 main :: IO ()
@@ -78,6 +79,10 @@ applyTest opts stat prng v1 v2 = do
     Significant    p -> putStrLn $ printf "Significant: %f" p
     NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
+  when (optPrintHistogram opts) $ do
+    putStrLn ""
+    printHistogram 21 result
+
 printStats :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
 printStats opts stat prng v1 v2 =
@@ -85,24 +90,26 @@ printStats opts stat prng v1 v2 =
     evalRandom (approxRandStats stat (optIterations opts) v1 v2) prng
 
 data Options = Options {
-  optColumn        :: Int,
-  optIterations    :: Int,
-  optPRNGSeed      :: Maybe Word64,
-  optPrintStats    :: Bool,
-  optSigP          :: Double,
-  optTestStatistic :: TestStatistic,
-  optTestType      :: TestType
+  optColumn         :: Int,
+  optPrintHistogram :: Bool,
+  optIterations     :: Int,
+  optPRNGSeed       :: Maybe Word64,
+  optPrintStats     :: Bool,
+  optSigP           :: Double,
+  optTestStatistic  :: TestStatistic,
+  optTestType       :: TestType
 }
 
 defaultOptions :: Options
 defaultOptions = Options {
-  optColumn        = 1,
-  optIterations    = 10000,
-  optPRNGSeed      = Nothing,
-  optPrintStats    = False,
-  optSigP          = 0.01,
-  optTestStatistic = meanDifference,
-  optTestType      = TwoTailed
+  optColumn         = 1,
+  optIterations     = 10000,
+  optPRNGSeed       = Nothing,
+  optPrintHistogram = False,
+  optPrintStats     = False,
+  optSigP           = 0.01,
+  optTestStatistic  = meanDifference,
+  optTestType       = TwoTailed
 }
 
 options :: [OptDescr (Options -> Options)]
@@ -110,6 +117,9 @@ options =
   [ Option ['c'] ["column"]
       (ReqArg (\arg opt -> opt { optColumn = read arg }) "NUMBER")
       "column number (starting at 1)",
+    Option ['h']    ["print-histogram"]
+      (NoArg (\opt -> opt { optPrintHistogram = True }))
+      "print a histogram of randomized sample statistics",
     Option ['i'] ["iterations"]
       (ReqArg (\arg opt -> opt { optIterations = read arg }) "NUMBER")
       "number of iterations",
