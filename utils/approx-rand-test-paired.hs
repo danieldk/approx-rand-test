@@ -77,8 +77,9 @@ applyTest opts stat prng v1 v2 = do
     Right r   -> do
                    printResult r
                    when (optPrintHistogram opts) $ do
-                     putStrLn ""
-                     printHistogram 21 r
+                     --putStrLn ""
+                     --printHistogram 21 r
+                     drawHistogram 21 r
 
 printResult :: TestResult -> IO ()
 printResult result = do
