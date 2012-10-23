@@ -82,6 +82,11 @@ applyTest opts stat prng v1 v2 = do
   when (optPrintHistogram opts) $ do
     putStrLn ""
     printHistogram 21 result
+  case (optWriteHistogram opts) of
+    Just fn ->
+      writeHistogram 31 result fn
+    Nothing ->
+      return ()
 
 printStats :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
@@ -97,7 +102,8 @@ data Options = Options {
   optPrintStats     :: Bool,
   optSigP           :: Double,
   optTestStatistic  :: TestStatistic,
-  optTestType       :: TestType
+  optTestType       :: TestType,
+  optWriteHistogram :: Maybe String
 }
 
 defaultOptions :: Options
@@ -109,7 +115,8 @@ defaultOptions = Options {
   optPrintStats     = False,
   optSigP           = 0.01,
   optTestStatistic  = meanDifference,
-  optTestType       = TwoTailed
+  optTestType       = TwoTailed,
+  optWriteHistogram = Nothing
 }
 
 options :: [OptDescr (Options -> Options)]
@@ -137,7 +144,10 @@ options =
       "pseudorandom number generator seed",
     Option ['t'] ["test-statistic"]
       (ReqArg (\arg opt -> opt { optTestStatistic = parseStatistic arg}) "NAME")
-      "test statistic (mean_diff, var_ratio)"
+      "test statistic (mean_diff, var_ratio)",
+    Option ['w'] ["write-histogram"]
+      (ReqArg (\arg opt -> opt { optWriteHistogram = Just arg}) "FILENAME")
+      "write a histogram (supported file extensions: pdf, png, ps, and svg)"
   ]
 
 getOptions :: IO (Options, [String])
