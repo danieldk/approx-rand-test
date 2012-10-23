@@ -63,6 +63,8 @@ createHistogram bins result =
     layout =
         Chart.layout1_background ^= Chart.solidFillStyle (Colour.opaque ColourNames.white)
       $ Chart.layout1_left_axis ^: Chart.laxis_override ^= Chart.axisTicksHide
+      $ Chart.layout1_right_axis ^: Chart.laxis_title ^= "Frequency"
+      $ Chart.layout1_bottom_axis ^: Chart.laxis_title ^= "Statistic"
       $ Chart.layout1_plots ^= [ Right (Chart.plotBars randomizationBars) ]
       $ Chart.setLayout1Foreground (Colour.opaque ColourNames.black)
       $ Chart.defaultLayout1
