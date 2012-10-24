@@ -11,6 +11,9 @@ Synopsis:      Approximate randomization test
 Description:   Utility to perform approximate randomization tests.
 Cabal-Version: >= 1.8
 Build-Type:    Simple
+Extra-Source-Files:
+  utils/cairo/CairoHistogram.hs
+  utils/nocairo/CairoHistogram.hs
 
 Source-Repository head
   Type:     git
@@ -38,7 +41,7 @@ Library
 
 Executable approx_rand_test
   Main-Is:        approx-rand-test.hs
-  Other-Modules:  SampleIO
+  Other-Modules:  SampleIO, TextHistogram
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
@@ -57,7 +60,7 @@ Executable approx_rand_test
 
 Executable approx_rand_test_paired
   Main-Is:        approx-rand-test-paired.hs
-  Other-Modules:  SampleIO
+  Other-Modules:  SampleIO, TextHistogram
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
