@@ -7,6 +7,7 @@ import           Control.Monad.ST (runST)
 import           Data.Accessor ((^=), (^:))
 import qualified Data.Colour as Colour
 import qualified Data.Colour.Names as ColourNames
+import qualified Data.Set as Set
 import qualified Data.Vector.Algorithms.Intro as VI
 import qualified Data.Vector.Generic as VG
 import           Data.Vector.Unboxed ((!))
@@ -22,21 +23,24 @@ hasCairoHistograms :: Bool
 hasCairoHistograms = True
 
 writeHistogram :: Int -> TestResult -> FP.FilePath -> IO ()
-writeHistogram bins result path = do
-  case snd $ FP.splitExtension path of
-    ".pdf" -> Chart.renderableToPDFFile (createHistogram bins result) 800 600 path
-    ".png" -> do
-      _ <- Chart.renderableToPNGFile (createHistogram bins result) 800 600 path
-      return ()
-    ".ps"  -> Chart.renderableToPSFile  (createHistogram bins result) 800 600 path
-    ".svg" -> Chart.renderableToSVGFile (createHistogram bins result) 800 600 path
-    _      -> hPutStrLn stderr "Unknown output format!"
+writeHistogram bins result path =
+  if maxBins bins (trRandomizedStats result) < 2 then
+    hPutStrLn stderr "Refusing to make a histogram, too few different randomization test scores!"
+  else
+    case snd $ FP.splitExtension path of
+      ".pdf" -> Chart.renderableToPDFFile (createHistogram bins result) 800 600 path
+      ".png" -> do
+        _ <- Chart.renderableToPNGFile (createHistogram bins result) 800 600 path
+        return ()
+      ".ps"  -> Chart.renderableToPSFile  (createHistogram bins result) 800 600 path
+      ".svg" -> Chart.renderableToSVGFile (createHistogram bins result) 800 600 path
+      _      -> hPutStrLn stderr "Unknown output format!"
 
 -- Returns the (x,y) points. If the test statistic for one of the original
 -- samples is in one of the bins, we make two y's for that bin: one is
 -- empty, the other has the frequency of that bin.
 dataPoints :: Int -> TestResult -> [(Double, [Int])]
-dataPoints bins (TestResult _ stat randomizedStats) =
+dataPoints bins (TestResult _ _ randomizedStats) =
   map zeroInRange $ VG.toList $ VG.zip ticks numSamples
   where
     (lowerBounds, numSamples) =
@@ -92,6 +96,9 @@ sigBounds TwoTailed n pval stats =
     nExtreme = floor $ (pval / 2) * (fromIntegral n + 1) - 1
     -- XXX: Fix extreme cases: p-value of 0, small n.
 
+maxBins :: Int -> Sample -> Int
+maxBins pref =
+  min pref . Set.size . VG.foldl' (flip Set.insert) Set.empty
 
 sortVector :: (Ord a, VG.Vector v a) => v a -> v a
 sortVector v = runST $ do
