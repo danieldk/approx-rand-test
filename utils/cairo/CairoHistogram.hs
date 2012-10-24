@@ -1,4 +1,5 @@
 module CairoHistogram (
+  hasCairoHistograms,
   writeHistogram
 ) where
 
@@ -12,6 +13,9 @@ import qualified Statistics.Sample.Histogram as SSH
 import           Statistics.Test.ApproxRand
 import qualified System.FilePath.Posix as FP
 import           System.IO (hPutStrLn, stderr)
+
+hasCairoHistograms :: Bool
+hasCairoHistograms = True
 
 writeHistogram :: Int -> TestResult -> FP.FilePath -> IO ()
 writeHistogram bins result path = do

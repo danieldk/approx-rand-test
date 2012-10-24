@@ -1,8 +1,12 @@
 module CairoHistogram (
+  hasCairoHistograms,
   writeHistogram
 ) where
 
 import           System.IO (hPutStrLn, stderr)
+
+hasCairoHistograms :: Bool
+hasCairoHistograms = False
 
 -- Stub function, for when we did not compile with Cairo support.
 writeHistogram :: Int -> b -> c -> IO ()

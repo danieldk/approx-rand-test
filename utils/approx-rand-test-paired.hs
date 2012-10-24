@@ -131,6 +131,14 @@ defaultOptions = Options {
 
 options :: [OptDescr (Options -> Options)]
 options =
+  if hasCairoHistograms then
+    cairoHistogramOption : mandatoryOptions
+  else
+    mandatoryOptions
+
+-- Options that are always available, regardless of the compilation flags.
+mandatoryOptions :: [OptDescr (Options -> Options)]
+mandatoryOptions =
   [ Option ['c'] ["column"]
       (ReqArg (\arg opt -> opt { optColumn = read arg }) "NUMBER")
       "column number (starting at 1)",
@@ -154,11 +162,14 @@ options =
       "pseudorandom number generator seed",
     Option ['t'] ["test-statistic"]
       (ReqArg (\arg opt -> opt { optTestStatistic = parseStatistic arg}) "NAME")
-      "test statistic (mean_diff, var_ratio)",
+      "test statistic (mean_diff, var_ratio)"
+  ]
+
+cairoHistogramOption :: OptDescr (Options -> Options)
+cairoHistogramOption =
     Option ['w'] ["write-histogram"]
       (ReqArg (\arg opt -> opt { optWriteHistogram = Just arg}) "FILENAME")
       "write a histogram (supported file extensions: pdf, png, ps, and svg)"
-  ]
 
 getOptions :: IO (Options, [String])
 getOptions = do
