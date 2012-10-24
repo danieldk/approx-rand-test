@@ -22,19 +22,21 @@ import           System.IO (hPutStrLn, stderr)
 hasCairoHistograms :: Bool
 hasCairoHistograms = True
 
-writeHistogram :: Int -> TestResult -> FP.FilePath -> IO ()
-writeHistogram bins result path =
+writeHistogram :: TestType -> Double -> Int -> TestResult -> FP.FilePath -> IO ()
+writeHistogram testType pTest bins result path =
   if maxBins bins (trRandomizedStats result) < 2 then
     hPutStrLn stderr "Refusing to make a histogram, too few different randomization test scores!"
   else
     case snd $ FP.splitExtension path of
-      ".pdf" -> Chart.renderableToPDFFile (createHistogram bins result) 800 600 path
+      ".pdf" -> Chart.renderableToPDFFile histogram 800 600 path
       ".png" -> do
-        _ <- Chart.renderableToPNGFile (createHistogram bins result) 800 600 path
+        _ <- Chart.renderableToPNGFile histogram 800 600 path
         return ()
-      ".ps"  -> Chart.renderableToPSFile  (createHistogram bins result) 800 600 path
-      ".svg" -> Chart.renderableToSVGFile (createHistogram bins result) 800 600 path
+      ".ps"  -> Chart.renderableToPSFile  histogram 800 600 path
+      ".svg" -> Chart.renderableToSVGFile histogram 800 600 path
       _      -> hPutStrLn stderr "Unknown output format!"
+  where
+    histogram = createHistogram testType pTest bins result
 
 -- Returns the (x,y) points. If the test statistic for one of the original
 -- samples is in one of the bins, we make two y's for that bin: one is
@@ -60,8 +62,8 @@ dataPoints bins (TestResult _ _ randomizedStats) =
 -- is always empty, except for the bin of the original statistic (if any).
 -- There, the first bar is empty and the second bar has the frequency.
 -- Yes, this is cheating ;).
-createHistogram :: Int -> TestResult -> Chart.Renderable ()
-createHistogram bins result =
+createHistogram :: TestType -> Double -> Int -> TestResult -> Chart.Renderable ()
+createHistogram testType pTest bins result =
   Chart.toRenderable layout
   where
     layout =
@@ -84,16 +86,21 @@ createHistogram bins result =
       $ Chart.defaultPlotBars
     statisticLine =
       Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (Colour.opaque ColourNames.red)) $ trStat result
-    sigLines      = map Right $ map sigLine $ sigBounds TwoTailed (VG.length $ trRandomizedStats result) 0.01 $ trRandomizedStats result
+    sigLines      = map Right $ map sigLine $ sigBounds testType (VG.length $ trRandomizedStats result) pTest $ trRandomizedStats result
     sigLine v     =
       Chart.vlinePlot "Significance" (Chart.solidLine 2 (Colour.opaque ColourNames.black)) v
 
+-- Calculate the bounds of significance.
 sigBounds :: TestType -> Int -> Double -> Sample -> [Double]
-sigBounds TwoTailed n pval stats =
-  [sorted ! (nExtreme - 1), sorted ! (n - nExtreme)]
+sigBounds testType n pTest stats =
+  case testType of
+    TwoTailed -> [sorted ! (nExtreme - 1), sorted ! (n - nExtreme)]
+    OneTailed -> [sorted ! (n - nExtreme)]
   where
-    sorted   = sortVector stats
-    nExtreme = floor $ (pval / 2) * (fromIntegral n + 1) - 1
+    sorted           = sortVector stats
+    nExtreme         = floor $ (pVal testType pTest) * (fromIntegral n + 1) - 1
+    pVal OneTailed p = p
+    pVal TwoTailed p = p / 2
     -- XXX: Fix extreme cases: p-value of 0, small n.
 
 maxBins :: Int -> Sample -> Int

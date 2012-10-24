@@ -85,7 +85,7 @@ applyTest opts stat prng v1 v2 = do
     printHistogram 21 result
   case (optWriteHistogram opts) of
     Just fn ->
-      writeHistogram 31 result fn
+      writeHistogram testType pTest 31 result fn
     Nothing ->
       return ()
 
