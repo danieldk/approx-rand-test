@@ -57,6 +57,11 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
   putStrLn $ printf "Sample sizes: %d %d" (V.length v1) (V.length v2)
 
+  let testOptions = TestOptions (optTestType opts)
+                                stat
+                                (optIterations opts)
+                                (optSigP opts)
+
   let testType = optTestType opts
 
   let pTest = optSigP opts
@@ -70,7 +75,7 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Tail significance: %f" pTail
 
   -- Approximate randomization testing.
-  let test = approxRandTest testType stat (optIterations opts) pTest v1 v2
+  let test = approxRandTest testOptions v1 v2
   let result = evalRandom test prng
 
   -- Print test statistic for the samples.
@@ -85,7 +90,7 @@ applyTest opts stat prng v1 v2 = do
     printHistogram 21 result
   case (optWriteHistogram opts) of
     Just fn ->
-      writeHistogram testType pTest 31 result fn
+      writeHistogram testOptions 31 result fn
     Nothing ->
       return ()
 

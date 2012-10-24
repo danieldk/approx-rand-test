@@ -21,6 +21,7 @@ module Statistics.Test.ApproxRand (
   -- $examples
 
   -- * Data types
+  TestOptions(..),
   TestResult(..),
   Significance(..),
   RandWithError,
@@ -108,6 +109,15 @@ import           System.Random.Mersenne.Pure64 (PureMT, randomInt, randomWord)
 -- | Computations with random numbers that can fail.
 type RandWithError a = ErrorT String Rand a
 
+-- | Options for randomization tests
+--
+data TestOptions = TestOptions {
+    toTestType      :: TestType,      -- ^ Type of test ('OneTailed' or 'TwoTailed')
+    toTestStatistic :: TestStatistic, -- ^ Test statistic
+    toIterations    :: Int,           -- ^ Number of shuffled samples to create
+    toPValue        :: Double         -- ^ he p-value at which to test (e.g. 0.05)
+}
+
 -- |
 -- The result of hypothesis testing.
 data TestResult = TestResult {
@@ -131,14 +141,11 @@ data Significance =
 -- index are swapped between samples with a probability of 0.5. Since
 -- swapping is pairwise, the samples should have the same length.
 approxRandPairTest ::
-     TestType                 -- ^ Type of test ('OneTailed' or 'TwoTailed')
-  -> TestStatistic            -- ^ Test statistic
-  -> Int                      -- ^ Number of shuffled samples to create
-  -> Double                   -- ^ The p-value at which to test (e.g. 0.05)
+     TestOptions              -- ^ Options for the test
   -> Sample                   -- ^ First sample
   -> Sample                   -- ^ Second sample
   -> RandWithError TestResult -- ^ The test result
-approxRandPairTest testType stat n pTest s1 s2 = do
+approxRandPairTest (TestOptions testType stat n pTest) s1 s2 = do
   stats <- approxRandPairStats stat n s1 s2
   let tOrig = stat s1 s2
   let sig = significance testType pTest n $ countExtremes tOrig $ stats
@@ -152,14 +159,11 @@ approxRandPairTest testType stat n pTest s1 s2 = do
 -- the original samples and the shuffled samples, to detect whether the
 -- difference of the samples is extreme or not.
 approxRandTest ::
-     TestType        -- ^ Type of test ('OneTailed' or 'TwoTailed')
-  -> TestStatistic   -- ^ Test statistic
-  -> Int             -- ^ Number of shuffled sample to create
-  -> Double          -- ^ The p-value at which to test (e.g. 0.05)
+     TestOptions     -- ^ Options for the test
   -> Sample          -- ^ First sample
   -> Sample          -- ^ Second sample
   -> Rand TestResult -- ^ The test result
-approxRandTest testType stat n pTest s1 s2 = do
+approxRandTest (TestOptions testType stat n pTest) s1 s2 = do
   stats <- approxRandStats stat n s1 s2
   let tOrig = stat s1 s2
   let sig = significance testType pTest n $ countExtremes tOrig stats

@@ -58,6 +58,11 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
   putStrLn $ printf "Sample size: %d" $ V.length v1
 
+  let testOptions = TestOptions (optTestType opts)
+                                stat
+                                (optIterations opts)
+                                (optSigP opts)
+
   let testType = optTestType opts
 
   let pTest = optSigP opts
@@ -70,7 +75,7 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Test significance: %f" pTest
   putStrLn $ printf "Tail significance: %f" pTail
 
-  let test = runErrorT $ approxRandPairTest testType stat (optIterations opts) pTest v1 v2
+  let test = runErrorT $ approxRandPairTest testOptions v1 v2
   let result = evalRandom test prng
 
   case result of
@@ -82,7 +87,7 @@ applyTest opts stat prng v1 v2 = do
                      printHistogram 21 r
                    case (optWriteHistogram opts) of
                      Just fn ->
-                       writeHistogram testType pTest 31 r fn
+                       writeHistogram testOptions 31 r fn
                      Nothing ->
                        return ()
 
