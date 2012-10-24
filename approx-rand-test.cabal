@@ -41,7 +41,7 @@ Library
 
 Executable approx_rand_test
   Main-Is:        approx-rand-test.hs
-  Other-Modules:  SampleIO, TextHistogram
+  Other-Modules:  Histogram, SampleIO, TextHistogram
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
@@ -61,7 +61,7 @@ Executable approx_rand_test
 
 Executable approx_rand_test_paired
   Main-Is:        approx-rand-test-paired.hs
-  Other-Modules:  SampleIO, TextHistogram
+  Other-Modules:  Histogram, SampleIO, TextHistogram
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
