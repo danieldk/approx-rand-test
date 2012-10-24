@@ -1,9 +1,7 @@
-module Histogram (
-  printHistogram,
+module CairoHistogram (
   writeHistogram
 ) where
 
-import           Control.Monad (forM_, when)
 import           Data.Accessor ((^=), (^:))
 import qualified Data.Colour as Colour
 import qualified Data.Colour.Names as ColourNames
@@ -14,25 +12,6 @@ import qualified Statistics.Sample.Histogram as SSH
 import           Statistics.Test.ApproxRand
 import qualified System.FilePath.Posix as FP
 import           System.IO (hPutStrLn, stderr)
-import           Text.Printf (printf)
-
-printHistogram :: Int -> TestResult -> IO ()
-printHistogram bins (TestResult _ score randomizedStats) = do
- forM_ [0..bins - 1] $ \bin -> do
-    let blocks = (numSamples ! bin) `div` charsPerDot
-    when (blocks > 0) $ do
-      let lower = lowerBounds ! bin
-      let barChar = if score >= lower && score < lower + bucketSize then
-                  '✣'
-                else
-                  '█'
-      putStr $ printf "%12.3e | " $ lower + bucketHalf
-      putStrLn $ replicate blocks barChar
-  where
-    (lowerBounds, numSamples) = SSH.histogram bins randomizedStats
-    bucketSize = (lowerBounds ! 1) - (lowerBounds ! 0)
-    bucketHalf = bucketSize / 2
-    charsPerDot = (VG.maximum numSamples) `div` 50
 
 writeHistogram :: Int -> TestResult -> FP.FilePath -> IO ()
 writeHistogram bins result path = do

@@ -26,8 +26,9 @@ import           System.Exit (exitFailure)
 import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
+import           CairoHistogram
 import           SampleIO
-import           Histogram
+import           TextHistogram
 
 main :: IO ()
 main = do
