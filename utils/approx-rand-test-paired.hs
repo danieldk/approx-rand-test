@@ -26,8 +26,9 @@ import           System.Exit (exitFailure)
 import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
+import           CairoHistogram
 import           SampleIO
-import           Histogram
+import           TextHistogram
 
 main :: IO ()
 main = do
@@ -79,6 +80,11 @@ applyTest opts stat prng v1 v2 = do
                    when (optPrintHistogram opts) $ do
                      putStrLn ""
                      printHistogram 21 r
+                   case (optWriteHistogram opts) of
+                     Just fn ->
+                       writeHistogram 31 r fn
+                     Nothing ->
+                       return ()
 
 printResult :: TestResult -> IO ()
 printResult result = do
@@ -106,7 +112,8 @@ data Options = Options {
   optPrintStats     :: Bool,
   optSigP           :: Double,
   optTestStatistic  :: TestStatistic,
-  optTestType       :: TestType
+  optTestType       :: TestType,
+  optWriteHistogram :: Maybe String
 }
 
 defaultOptions :: Options
@@ -118,11 +125,20 @@ defaultOptions = Options {
   optPrintStats     = False,
   optSigP           = 0.01,
   optTestStatistic  = differenceMean,
-  optTestType       = TwoTailed
+  optTestType       = TwoTailed,
+  optWriteHistogram = Nothing
 }
 
 options :: [OptDescr (Options -> Options)]
 options =
+  if hasCairoHistograms then
+    cairoHistogramOption : mandatoryOptions
+  else
+    mandatoryOptions
+
+-- Options that are always available, regardless of the compilation flags.
+mandatoryOptions :: [OptDescr (Options -> Options)]
+mandatoryOptions =
   [ Option ['c'] ["column"]
       (ReqArg (\arg opt -> opt { optColumn = read arg }) "NUMBER")
       "column number (starting at 1)",
@@ -148,6 +164,12 @@ options =
       (ReqArg (\arg opt -> opt { optTestStatistic = parseStatistic arg}) "NAME")
       "test statistic (mean_diff, var_ratio)"
   ]
+
+cairoHistogramOption :: OptDescr (Options -> Options)
+cairoHistogramOption =
+    Option ['w'] ["write-histogram"]
+      (ReqArg (\arg opt -> opt { optWriteHistogram = Just arg}) "FILENAME")
+      "write a histogram (supported file extensions: pdf, png, ps, and svg)"
 
 getOptions :: IO (Options, [String])
 getOptions = do

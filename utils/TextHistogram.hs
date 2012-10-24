@@ -1,5 +1,5 @@
-module Histogram (
-  printHistogram
+module TextHistogram (
+  printHistogram,
 ) where
 
 import           Control.Monad (forM_, when)
@@ -26,5 +26,4 @@ printHistogram bins (TestResult _ score randomizedStats) = do
     bucketSize = (lowerBounds ! 1) - (lowerBounds ! 0)
     bucketHalf = bucketSize / 2
     charsPerDot = (VG.maximum numSamples) `div` 50
-
 

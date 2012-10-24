@@ -17,11 +17,19 @@ applied on the original samples; and *N* the number of shuffles, then
 the null-hypothesis is rejected iff *(r + 1):(N + 1) < p-value* (for
 one-sided tests).
 
+The included command-line utilities can perform randomization tests and
+draw histograms of the test statistic for the randomized samples.
+
 ## Installation
 
 Install the necessary dependencies, and run:
 
     cabal install
+
+The command-line utilities also have support for making histograms. This
+requires the package to be compiled with Cairo support:
+
+    cabal install -fwithCairo
 
 ## Usage
 
