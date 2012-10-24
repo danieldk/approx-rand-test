@@ -3,14 +3,18 @@ module CairoHistogram (
   writeHistogram
 ) where
 
+import           Control.Monad.ST (runST)
 import           Data.Accessor ((^=), (^:))
 import qualified Data.Colour as Colour
 import qualified Data.Colour.Names as ColourNames
+import qualified Data.Vector.Algorithms.Intro as VI
 import qualified Data.Vector.Generic as VG
 import           Data.Vector.Unboxed ((!))
 import qualified Graphics.Rendering.Chart as Chart
 import qualified Statistics.Sample.Histogram as SSH
 import           Statistics.Test.ApproxRand
+import           Statistics.Test.Types (TestType(..))
+import           Statistics.Types
 import qualified System.FilePath.Posix as FP
 import           System.IO (hPutStrLn, stderr)
 
@@ -44,8 +48,9 @@ dataPoints bins (TestResult _ stat randomizedStats) =
     ticks = VG.map ((+) bucketHalf) lowerBounds
 
     -- Mark the bin with the original statistic for the samples.
-    inRange t = stat >= t - bucketHalf && stat < t + bucketHalf
-    zeroInRange (t, f) = if inRange t then (t, [0, f]) else (t, [f])
+    --inRange t = stat >= t - bucketHalf && stat < t + bucketHalf
+    --zeroInRange (t, f) = if inRange t then (t, [0, f]) else (t, [f])
+    zeroInRange (t, f) = (t, [f])
 
 -- Creates a histogram. The histogram is stacked, but the second bar
 -- is always empty, except for the bin of the original statistic (if any).
@@ -60,14 +65,36 @@ createHistogram bins result =
       $ Chart.layout1_left_axis   ^: Chart.laxis_override ^= Chart.axisTicksHide
       $ Chart.layout1_right_axis  ^: Chart.laxis_title    ^= "Frequency"
       $ Chart.layout1_bottom_axis ^: Chart.laxis_title    ^= "Statistic"
-      $ Chart.layout1_plots       ^= [ Right $ Chart.plotBars randomizationBars ]
+      $ Chart.layout1_plots       ^= Right (Chart.plotBars randomizationBars) :
+                                     Right statisticLine : sigLines
       $ Chart.setLayout1Foreground   (Colour.opaque ColourNames.black)
       $ Chart.defaultLayout1
     randomizationBars =
         Chart.plot_bars_style       ^= Chart.BarsStacked
       $ Chart.plot_bars_spacing     ^= Chart.BarsFixGap 6 2
+      -- $ Chart.plot_bars_spacing     ^= Chart.BarsFixGap 0 0
       $ Chart.plot_bars_item_styles ^= [
           (Chart.solidFillStyle $ Colour.opaque ColourNames.green, Nothing),
           (Chart.solidFillStyle $ Colour.opaque ColourNames.red, Nothing) ]
       $ Chart.plot_bars_values      ^= dataPoints bins result
       $ Chart.defaultPlotBars
+    statisticLine =
+      Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (Colour.opaque ColourNames.red)) $ trStat result
+    sigLines      = map Right $ map sigLine $ sigBounds TwoTailed (VG.length $ trRandomizedStats result) 0.01 $ trRandomizedStats result
+    sigLine v     =
+      Chart.vlinePlot "Significance" (Chart.solidLine 2 (Colour.opaque ColourNames.black)) v
+
+sigBounds :: TestType -> Int -> Double -> Sample -> [Double]
+sigBounds TwoTailed n pval stats =
+  [sorted ! (nExtreme - 1), sorted ! (n - nExtreme)]
+  where
+    sorted   = sortVector stats
+    nExtreme = floor $ (pval / 2) * (fromIntegral n + 1) - 1
+    -- XXX: Fix extreme cases: p-value of 0, small n.
+
+
+sortVector :: (Ord a, VG.Vector v a) => v a -> v a
+sortVector v = runST $ do
+  s <- VG.thaw v
+  VI.sort s
+  VG.freeze s
