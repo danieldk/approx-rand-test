@@ -50,8 +50,8 @@ createHistogram testOptions result his =
       $ Chart.layout1_left_axis   ^: Chart.laxis_override ^= Chart.axisTicksHide
       $ Chart.layout1_right_axis  ^: Chart.laxis_title    ^= "Frequency"
       $ Chart.layout1_bottom_axis ^: Chart.laxis_title    ^= "Statistic"
-      $ Chart.layout1_plots       ^= Right (Chart.plotBars randomizationBars) :
-                                     Right statisticLine : sigLines
+      $ Chart.layout1_plots       ^= [ Right (Chart.plotBars randomizationBars),
+                                       Right statisticLine, Right sigLines ]
       $ Chart.setLayout1Foreground   opaqueBlack
       $ Chart.defaultLayout1
     randomizationBars =
@@ -64,9 +64,18 @@ createHistogram testOptions result his =
       $ Chart.defaultPlotBars
     statisticLine =
       Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (opaqueRed)) $ trStat result
-    sigLines      = map Right $ map sigLine $ sigBounds testOptions result
-    sigLine v     =
-      Chart.vlinePlot "Significance" (Chart.solidLine 2 opaqueBlack) v
+    sigLines      =
+      vlinesPlot "Significance" (Chart.solidLine 2 opaqueBlack) $
+        sigBounds testOptions result
+
+-- Plot vertical lines, adapted from Chart.vlinePlot.
+vlinesPlot :: String -> Chart.CairoLineStyle -> [a] -> Chart.Plot a b
+vlinesPlot t ls xs = Chart.toPlot Chart.defaultPlotLines {
+    Chart.plot_lines_title_        = t,
+    Chart.plot_lines_style_        = ls,
+    Chart.plot_lines_limit_values_ =
+      [[(Chart.LValue v, Chart.LMin),(Chart.LValue v, Chart.LMax)] | v <- xs]
+    }
 
 -- Calculate the bounds of significance.
 sigBounds :: TestOptions -> TestResult -> [Double]
