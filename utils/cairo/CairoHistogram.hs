@@ -65,7 +65,7 @@ createHistogram testOptions result his =
     statisticLine =
       Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (opaqueRed)) $ trStat result
     sigLines      =
-      vlinesPlot "Significance" (Chart.solidLine 2 opaqueBlack) $
+      vlinesPlot "Significance" (Chart.dashedLine 2 [8, 4] opaqueBlack) $
         sigBounds testOptions result
 
 -- Plot vertical lines, adapted from Chart.vlinePlot.
