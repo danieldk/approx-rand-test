@@ -35,7 +35,6 @@ writeHistogram testOptions bins result path =
           ".ps"  -> Chart.renderableToPSFile  r 800 600 path
           ".svg" -> Chart.renderableToSVGFile r 800 600 path
           _      -> hPutStrLn stderr "Unknown output format!"
-  where
 
 -- Creates a histogram. The histogram is stacked, but the second bar
 -- is always empty, except for the bin of the original statistic (if any).
@@ -47,28 +46,27 @@ createHistogram testOptions result his =
   Chart.toRenderable layout
   where
     layout =
-        Chart.layout1_background  ^= Chart.solidFillStyle (Colour.opaque ColourNames.white)
+        Chart.layout1_background  ^= Chart.solidFillStyle opaqueWhite
       $ Chart.layout1_left_axis   ^: Chart.laxis_override ^= Chart.axisTicksHide
       $ Chart.layout1_right_axis  ^: Chart.laxis_title    ^= "Frequency"
       $ Chart.layout1_bottom_axis ^: Chart.laxis_title    ^= "Statistic"
       $ Chart.layout1_plots       ^= Right (Chart.plotBars randomizationBars) :
                                      Right statisticLine : sigLines
-      $ Chart.setLayout1Foreground   (Colour.opaque ColourNames.black)
+      $ Chart.setLayout1Foreground   opaqueBlack
       $ Chart.defaultLayout1
     randomizationBars =
         Chart.plot_bars_style       ^= Chart.BarsStacked
       $ Chart.plot_bars_spacing     ^= Chart.BarsFixGap 6 2
       -- $ Chart.plot_bars_spacing     ^= Chart.BarsFixGap 0 0
       $ Chart.plot_bars_item_styles ^= [
-          (Chart.solidFillStyle $ Colour.opaque ColourNames.green, Nothing),
-          (Chart.solidFillStyle $ Colour.opaque ColourNames.red, Nothing) ]
+          (Chart.solidFillStyle $ opaqueGreen, Nothing) ]
       $ Chart.plot_bars_values      ^= map (\(b, f) -> (b, [f])) his
       $ Chart.defaultPlotBars
     statisticLine =
-      Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (Colour.opaque ColourNames.red)) $ trStat result
+      Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (opaqueRed)) $ trStat result
     sigLines      = map Right $ map sigLine $ sigBounds testOptions result
     sigLine v     =
-      Chart.vlinePlot "Significance" (Chart.solidLine 2 (Colour.opaque ColourNames.black)) v
+      Chart.vlinePlot "Significance" (Chart.solidLine 2 opaqueBlack) v
 
 -- Calculate the bounds of significance.
 sigBounds :: TestOptions -> TestResult -> [Double]
@@ -89,3 +87,9 @@ sortVector v = runST $ do
   VI.sort s
   VG.freeze s
 
+-- Convenience...
+opaqueBlack, opaqueGreen, opaqueRed, opaqueWhite :: Colour.AlphaColour Double
+opaqueBlack = Colour.opaque ColourNames.black
+opaqueGreen = Colour.opaque ColourNames.green
+opaqueRed   = Colour.opaque ColourNames.red
+opaqueWhite = Colour.opaque ColourNames.white
