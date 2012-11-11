@@ -35,8 +35,8 @@ Library
   Build-Depends:   base >= 4 && < 5, vector >= 0.9 && < 0.11,
                    mersenne-random-pure64 == 0.2.0.*,
                    monad-mersenne-random == 0.1,
-                   mtl == 2.1.*, statistics == 0.10.*,
-                   transformers == 0.3.*
+                   mtl >= 2.0.1 && < 2.2, statistics == 0.10.*,
+                   transformers >= 0.2.2 && < 0.4
 
 
 Executable approx_rand_test
@@ -45,7 +45,7 @@ Executable approx_rand_test
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
-                  conduit >= 0.4 && < 0.6, text == 0.11.2.*,
+                  conduit >= 0.4 && < 0.6, text >= 0.11.1 && < 0.11.3,
                   containers == 0.4.*, vector >= 0.9 && < 0.11,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1,
@@ -65,11 +65,11 @@ Executable approx_rand_test_paired
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
-                  conduit >= 0.4 && < 0.6, text == 0.11.2.*,
+                  conduit >= 0.4 && < 0.6, text >= 0.11.1 && < 0.11.3,
                   containers == 0.4.*, vector >= 0.9 && < 0.11,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1,
-                  mtl == 2.1.*, statistics == 0.10.*
+                  mtl >= 2.0.1 && < 2.2, statistics == 0.10.*
   if flag(withCairo)
     Hs-Source-Dirs: utils/cairo
     Build-Depends:  Chart >= 0.15 && < 0.17, colour == 2.3.*,
