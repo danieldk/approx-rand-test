@@ -13,6 +13,7 @@ module Main where
 
 import           Control.Monad (liftM, when)
 import           Control.Monad.Mersenne.Random (evalRandom)
+import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Unboxed as V
 import           Data.Word (Word64)
 import           Statistics.Test.ApproxRand
@@ -24,7 +25,9 @@ import           System.Exit (exitFailure)
 import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
+import           CairoHistogram
 import           SampleIO
+import           TextHistogram
 
 main :: IO ()
 main = do
@@ -42,8 +45,8 @@ main = do
     Just seed -> return $ pureMT seed
     Nothing   -> newPureMT
 
-  if optPrintScores opts then
-    printScores opts stat prng v1 v2
+  if optPrintStats opts then
+    printStats opts stat prng v1 v2
   else
     applyTest opts stat prng v1 v2
 
@@ -54,9 +57,10 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Iterations: %d" $ optIterations opts
   putStrLn $ printf "Sample sizes: %d %d" (V.length v1) (V.length v2)
 
-  -- Calculate test statistic for original score sets.
-  let tOrig = stat v1 v2
-  putStrLn $ printf "Test statistic: %f" tOrig
+  let testOptions = TestOptions (optTestType opts)
+                                stat
+                                (optIterations opts)
+                                (optSigP opts)
 
   let testType = optTestType opts
 
@@ -71,44 +75,71 @@ applyTest opts stat prng v1 v2 = do
   putStrLn $ printf "Tail significance: %f" pTail
 
   -- Approximate randomization testing.
-  let test = approxRandTest testType stat (optIterations opts) pTest v1 v2
+  let test = approxRandTest testOptions v1 v2
   let result = evalRandom test prng
-  case result of
+
+  -- Print test statistic for the samples.
+  putStrLn $ printf "Test statistic: %f" $ trStat result
+
+  case trSignificance result of
     Significant    p -> putStrLn $ printf "Significant: %f" p
     NotSignificant p -> putStrLn $ printf "Not significant: %f" p
 
-printScores :: Options -> TestStatistic -> PureMT -> Sample ->
+  when (optPrintHistogram opts) $ do
+    putStrLn ""
+    printHistogram 21 result
+  case (optWriteHistogram opts) of
+    Just fn ->
+      writeHistogram testOptions 31 result fn
+    Nothing ->
+      return ()
+
+printStats :: Options -> TestStatistic -> PureMT -> Sample ->
   Sample -> IO ()
-printScores opts stat prng v1 v2 =
-  mapM_ (putStrLn . printf "%f") $
-    evalRandom (approxRandScores stat (optIterations opts) v1 v2) prng
+printStats opts stat prng v1 v2 =
+  VG.mapM_ (putStrLn . printf "%f") $
+    evalRandom (approxRandStats stat (optIterations opts) v1 v2) prng
 
 data Options = Options {
-  optColumn        :: Int,
-  optIterations    :: Int,
-  optPRNGSeed      :: Maybe Word64,
-  optPrintScores   :: Bool,
-  optSigP          :: Double,
-  optTestStatistic :: TestStatistic,
-  optTestType      :: TestType
+  optColumn         :: Int,
+  optPrintHistogram :: Bool,
+  optIterations     :: Int,
+  optPRNGSeed       :: Maybe Word64,
+  optPrintStats     :: Bool,
+  optSigP           :: Double,
+  optTestStatistic  :: TestStatistic,
+  optTestType       :: TestType,
+  optWriteHistogram :: Maybe String
 }
 
 defaultOptions :: Options
 defaultOptions = Options {
-  optColumn        = 1,
-  optIterations    = 10000,
-  optPRNGSeed      = Nothing,
-  optPrintScores   = False,
-  optSigP          = 0.01,
-  optTestStatistic = meanDifference,
-  optTestType      = TwoTailed
+  optColumn         = 1,
+  optIterations     = 10000,
+  optPRNGSeed       = Nothing,
+  optPrintHistogram = False,
+  optPrintStats     = False,
+  optSigP           = 0.01,
+  optTestStatistic  = meanDifference,
+  optTestType       = TwoTailed,
+  optWriteHistogram = Nothing
 }
 
 options :: [OptDescr (Options -> Options)]
-options =
+options = 
+  if hasCairoHistograms then
+    cairoHistogramOption : mandatoryOptions
+  else
+    mandatoryOptions
+
+mandatoryOptions :: [OptDescr (Options -> Options)]
+mandatoryOptions =
   [ Option ['c'] ["column"]
       (ReqArg (\arg opt -> opt { optColumn = read arg }) "NUMBER")
       "column number (starting at 1)",
+    Option ['h']    ["print-histogram"]
+      (NoArg (\opt -> opt { optPrintHistogram = True }))
+      "print a histogram of randomized sample statistics",
     Option ['i'] ["iterations"]
       (ReqArg (\arg opt -> opt { optIterations = read arg }) "NUMBER")
       "number of iterations",
@@ -119,8 +150,8 @@ options =
       (ReqArg (\arg opt -> opt {optSigP = read arg }) "NUMBER")
       "significant p-value",
     Option []    ["print-scores"]
-      (NoArg (\opt -> opt { optPrintScores = True }))
-      "output scores of permuted vectors",
+      (NoArg (\opt -> opt { optPrintStats = True }))
+      "output statistics of permuted vectors",
     Option ['s'] ["seed"]
       (ReqArg (\arg opt -> opt { optPRNGSeed = Just $ read arg}) "NUMBER")
       "pseudorandom number generator seed",
@@ -128,6 +159,12 @@ options =
       (ReqArg (\arg opt -> opt { optTestStatistic = parseStatistic arg}) "NAME")
       "test statistic (mean_diff, var_ratio)"
   ]
+
+cairoHistogramOption :: OptDescr (Options -> Options)
+cairoHistogramOption =
+    Option ['w'] ["write-histogram"]
+      (ReqArg (\arg opt -> opt { optWriteHistogram = Just arg}) "FILENAME")
+      "write a histogram (supported file extensions: pdf, png, ps, and svg)"
 
 getOptions :: IO (Options, [String])
 getOptions = do
