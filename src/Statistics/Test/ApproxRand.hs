@@ -148,7 +148,7 @@ approxRandPairTest ::
 approxRandPairTest (TestOptions testType stat n pTest) s1 s2 = do
   stats <- approxRandPairStats stat n s1 s2
   let tOrig = stat s1 s2
-  let sig = significance testType pTest n $ countExtremes tOrig $ stats
+  let sig = significance testType pTest n $ countExtremes tOrig stats
   return $ TestResult sig tOrig stats
 
 -- |
@@ -261,7 +261,7 @@ shuffleVectorsPairwise vec1 vec2 = do
     permute val1 val2 coin =
       if coin then val1 else val2
 
-randomVector :: (VG.Vector v Bool) => Int -> Rand (v Bool)
+randomVector :: VG.Vector v Bool => Int -> Rand (v Bool)
 randomVector len =
   VG.replicateM len getBool
 
