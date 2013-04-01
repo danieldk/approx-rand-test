@@ -8,7 +8,15 @@ Maintainer:    Daniël de Kok <me@danieldk.eu>
 Homepage:      http://github.com/danieldk/approx-rand-test
 Category:      Statistics
 Synopsis:      Approximate randomization test
-Description:   Utility to perform approximate randomization tests.
+Description:
+  .
+  Functions and utilities to perform paired and unpaired approximate
+  randomization tests (Noreen, 1989).
+  .
+  The utilities can also draw histograms of the applications of the test
+  statistic to the randomized samples. This requires that the package is
+  installed with the @-withCairo@ flag.
+  .
 Cabal-Version: >= 1.8
 Build-Type:    Simple
 Extra-Source-Files:
