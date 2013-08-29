@@ -26,8 +26,11 @@ Install the necessary dependencies, and run:
 
     cabal install
 
-The command-line utilities also have support for making histograms. This
-requires the package to be compiled with Cairo support:
+The command-line utilities also have support for making histograms. By
+default, this uses the *diagrams* backend, which can produce EPS and SVG
+files. The Cairo backend can produce more files (such as PNG and PDF), but
+may be more difficult to install on some systems. To compile the package
+with Cairo support, use:
 
     cabal install -fwithCairo
 
