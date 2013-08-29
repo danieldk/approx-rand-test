@@ -3,14 +3,16 @@ module CairoHistogram (
   writeHistogram
 ) where
 
+import           Control.Lens.Setter ((.~))
 import           Control.Monad.ST (runST)
-import           Data.Accessor ((^=), (^:))
 import qualified Data.Colour as Colour
 import qualified Data.Colour.Names as ColourNames
+import           Data.Default.Class
 import qualified Data.Vector.Algorithms.Intro as VI
 import qualified Data.Vector.Generic as VG
 import           Data.Vector.Unboxed ((!))
 import qualified Graphics.Rendering.Chart as Chart
+import qualified Graphics.Rendering.Chart.Backend.Cairo as CairoChart
 import           Statistics.Test.ApproxRand
 import           Statistics.Test.Types (TestType(..))
 import qualified System.FilePath.Posix as FP
@@ -28,12 +30,12 @@ writeHistogram testOptions bins result path =
     Right  h ->
       let r = createHistogram testOptions result h in
         case snd $ FP.splitExtension path of
-          ".pdf" -> Chart.renderableToPDFFile r 800 600 path
+          ".pdf" -> CairoChart.renderableToPDFFile r 800 600 path
           ".png" -> do
-            _ <- Chart.renderableToPNGFile r 800 600 path
+            _ <- CairoChart.renderableToPNGFile r 800 600 path
             return ()
-          ".ps"  -> Chart.renderableToPSFile  r 800 600 path
-          ".svg" -> Chart.renderableToSVGFile r 800 600 path
+          ".ps"  -> CairoChart.renderableToPSFile  r 800 600 path
+          ".svg" -> CairoChart.renderableToSVGFile r 800 600 path
           _      -> hPutStrLn stderr "Unknown output format!"
 
 -- Creates a histogram. The histogram is stacked, but the second bar
@@ -46,22 +48,22 @@ createHistogram testOptions result his =
   Chart.toRenderable layout
   where
     layout =
-        Chart.layout1_background  ^= Chart.solidFillStyle opaqueWhite
-      $ Chart.layout1_left_axis   ^: Chart.laxis_override ^= Chart.axisTicksHide
-      $ Chart.layout1_right_axis  ^: Chart.laxis_title    ^= "Frequency"
-      $ Chart.layout1_bottom_axis ^: Chart.laxis_title    ^= "Statistic"
-      $ Chart.layout1_plots       ^= [ Right (Chart.plotBars randomizationBars),
+        Chart.layout1_background  .~ Chart.solidFillStyle opaqueWhite
+      $ Chart.layout1_left_axis   .  Chart.laxis_override .~ Chart.axisTicksHide
+      $ Chart.layout1_right_axis  .  Chart.laxis_title    .~ "Frequency"
+      $ Chart.layout1_bottom_axis .  Chart.laxis_title    .~ "Statistic"
+      $ Chart.layout1_plots       .~ [ Right (Chart.plotBars randomizationBars),
                                        Right statisticLine, Right sigLines ]
       $ Chart.setLayout1Foreground   opaqueBlack
-      $ Chart.defaultLayout1
+      $ def
     randomizationBars =
-        Chart.plot_bars_style       ^= Chart.BarsStacked
-      $ Chart.plot_bars_spacing     ^= Chart.BarsFixGap 6 2
+        Chart.plot_bars_style       .~ Chart.BarsStacked
+      $ Chart.plot_bars_spacing     .~ Chart.BarsFixGap 6 2
       -- $ Chart.plot_bars_spacing     ^= Chart.BarsFixGap 0 0
-      $ Chart.plot_bars_item_styles ^= [
+      $ Chart.plot_bars_item_styles .~ [
           (Chart.solidFillStyle $ opaqueGreen, Nothing) ]
-      $ Chart.plot_bars_values      ^= map (\(b, f) -> (b, [f])) his
-      $ Chart.defaultPlotBars
+      $ Chart.plot_bars_values      .~ map (\(b, f) -> (b, [f])) his
+      $ def
     statisticLine =
       Chart.vlinePlot "Statistic for samples" (Chart.solidLine 2 (opaqueRed)) $ trStat result
     sigLines      =
@@ -69,11 +71,11 @@ createHistogram testOptions result his =
         sigBounds testOptions result
 
 -- Plot vertical lines, adapted from Chart.vlinePlot.
-vlinesPlot :: String -> Chart.CairoLineStyle -> [a] -> Chart.Plot a b
-vlinesPlot t ls xs = Chart.toPlot Chart.defaultPlotLines {
-    Chart.plot_lines_title_        = t,
-    Chart.plot_lines_style_        = ls,
-    Chart.plot_lines_limit_values_ =
+vlinesPlot :: String -> Chart.LineStyle -> [a] -> Chart.Plot a b
+vlinesPlot t ls xs = Chart.toPlot def {
+    Chart._plot_lines_title        = t,
+    Chart._plot_lines_style        = ls,
+    Chart._plot_lines_limit_values =
       [[(Chart.LValue v, Chart.LMin),(Chart.LValue v, Chart.LMax)] | v <- xs]
     }
 
