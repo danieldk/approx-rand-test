@@ -103,5 +103,5 @@ Test-Suite tests
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1,
                   HUnit >= 1.2.4 && < 1.2.6,
-                  test-framework == 0.6.*,
-                  test-framework-hunit == 0.2.*
+                  test-framework >= 0.6 && < 0.9,
+                  test-framework-hunit >= 0.2 && < 0.4
