@@ -13,6 +13,7 @@ module Main where
 
 import           Control.Monad (liftM, when)
 import           Control.Monad.Mersenne.Random (evalRandom)
+import           Data.List (intersperse)
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Unboxed as V
 import           Data.Word (Word64)
@@ -25,7 +26,7 @@ import           System.Exit (exitFailure)
 import           System.Random.Mersenne.Pure64 (PureMT, newPureMT, pureMT)
 import           Text.Printf (printf)
 
-import           CairoHistogram
+import           ChartHistogram
 import           SampleIO
 import           TextHistogram
 
@@ -127,10 +128,7 @@ defaultOptions = Options {
 
 options :: [OptDescr (Options -> Options)]
 options = 
-  if hasCairoHistograms then
-    cairoHistogramOption : mandatoryOptions
-  else
-    mandatoryOptions
+  chartHistogramOption backendFormats : mandatoryOptions
 
 mandatoryOptions :: [OptDescr (Options -> Options)]
 mandatoryOptions =
@@ -160,11 +158,13 @@ mandatoryOptions =
       "test statistic (mean_diff, var_ratio)"
   ]
 
-cairoHistogramOption :: OptDescr (Options -> Options)
-cairoHistogramOption =
-    Option ['w'] ["write-histogram"]
-      (ReqArg (\arg opt -> opt { optWriteHistogram = Just arg}) "FILENAME")
-      "write a histogram (supported file extensions: pdf, png, ps, and svg)"
+chartHistogramOption :: [String] -> OptDescr (Options -> Options)
+chartHistogramOption formats =
+  Option ['w'] ["write-histogram"]
+    (ReqArg (\arg opt -> opt { optWriteHistogram = Just arg}) "FILENAME")
+    $ printf "write a histogram (supported file extensions: %s)" formatStr
+  where
+    formatStr = concat $ intersperse ", " formats
 
 getOptions :: IO (Options, [String])
 getOptions = do

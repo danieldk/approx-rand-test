@@ -1,5 +1,5 @@
-module CairoHistogram (
-  hasCairoHistograms,
+module ChartHistogram (
+  backendFormats,
   writeHistogram
 ) where
 
@@ -12,31 +12,19 @@ import qualified Data.Vector.Algorithms.Intro as VI
 import qualified Data.Vector.Generic as VG
 import           Data.Vector.Unboxed ((!))
 import qualified Graphics.Rendering.Chart as Chart
-import qualified Graphics.Rendering.Chart.Backend.Cairo as CairoChart
 import           Statistics.Test.ApproxRand
 import           Statistics.Test.Types (TestType(..))
-import qualified System.FilePath.Posix as FP
 import           System.IO (hPutStrLn, stderr)
 
 import           Histogram
+import           ChartBackend
 
-hasCairoHistograms :: Bool
-hasCairoHistograms = True
-
-writeHistogram :: TestOptions -> Int -> TestResult -> FP.FilePath -> IO ()
+writeHistogram :: TestOptions -> Int -> TestResult -> FilePath -> IO ()
 writeHistogram testOptions bins result path =
   case histogram bins result of
     Left err -> hPutStrLn stderr err
     Right  h ->
-      let r = createHistogram testOptions result h in
-        case snd $ FP.splitExtension path of
-          ".pdf" -> CairoChart.renderableToPDFFile r 800 600 path
-          ".png" -> do
-            _ <- CairoChart.renderableToPNGFile r 800 600 path
-            return ()
-          ".ps"  -> CairoChart.renderableToPSFile  r 800 600 path
-          ".svg" -> CairoChart.renderableToSVGFile r 800 600 path
-          _      -> hPutStrLn stderr "Unknown output format!"
+      writeWithBackend (createHistogram testOptions result h) path
 
 -- Creates a histogram. The histogram is stacked, but the second bar
 -- is always empty, except for the bin of the original statistic (if any).
