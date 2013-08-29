@@ -60,12 +60,16 @@ createHistogram testOptions result his =
 
 -- Plot vertical lines, adapted from Chart.vlinePlot.
 vlinesPlot :: String -> Chart.LineStyle -> [a] -> Chart.Plot a b
-vlinesPlot t ls xs = Chart.toPlot def {
-    Chart._plot_lines_title        = t,
-    Chart._plot_lines_style        = ls,
-    Chart._plot_lines_limit_values =
-      [[(Chart.LValue v, Chart.LMin),(Chart.LValue v, Chart.LMax)] | v <- xs]
-    }
+vlinesPlot t ls xs = Chart.toPlot vlines
+  where
+    vlines =
+        Chart.plot_lines_title        .~ t
+      $ Chart.plot_lines_style        .~ ls
+      $ Chart.plot_lines_limit_values .~ minMax
+      $ def
+    minMax =
+      [[(Chart.LValue v, Chart.LMin), (Chart.LValue v, Chart.LMax)] | v <- xs]
+
 
 -- Calculate the bounds of significance.
 sigBounds :: TestOptions -> TestResult -> [Double]
