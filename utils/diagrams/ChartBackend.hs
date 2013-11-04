@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module ChartBackend (
   backendFormats,
   writeWithBackend
@@ -5,26 +7,26 @@ module ChartBackend (
 
 import           Control.Lens.Setter ((.~))
 import           Control.Monad (void)
-import qualified Data.Map.Lazy as Map
+import           Data.Default
+import           Data.Default.Class ()
 import qualified Graphics.Rendering.Chart as Chart
 import qualified Graphics.Rendering.Chart.Backend.Diagrams as DiagramsChart
 import qualified System.FilePath.Posix as FP
 import           System.IO (hPutStrLn, stderr)
 
-backendFormats :: [String]
-backendFormats = ["eps", "svg"]
-
 type RenderFunction a = Chart.Renderable a -> FilePath -> IO (Chart.PickFn a)
 
-defaultFileOptions :: DiagramsChart.FileOptions
-defaultFileOptions = DiagramsChart.FileOptions (800, 600) DiagramsChart.SVG Map.empty
+instance Default DiagramsChart.FileOptions where
+  def = DiagramsChart.FileOptions (800, 600) DiagramsChart.SVG def
 
 renderFunctions :: [(String, RenderFunction a)]
 renderFunctions =
   [ (".eps", DiagramsChart.renderableToFile $
-      (DiagramsChart.fo_format .~ DiagramsChart.EPS) defaultFileOptions),
-    (".svg", DiagramsChart.renderableToFile defaultFileOptions) ]
-  
+      DiagramsChart.fo_format .~ DiagramsChart.EPS $ def),
+    (".svg", DiagramsChart.renderableToFile def) ]
+
+backendFormats :: [String]
+backendFormats = map fst renderFunctions
 
 writeWithBackend :: Chart.Renderable () -> FP.FilePath -> IO ()
 writeWithBackend renderable path =
