@@ -36,13 +36,12 @@ createHistogram testOptions result his =
   Chart.toRenderable layout
   where
     layout =
-        Chart.layout1_background  .~ Chart.solidFillStyle opaqueWhite
-      $ Chart.layout1_left_axis   .  Chart.laxis_override .~ Chart.axisTicksHide
-      $ Chart.layout1_right_axis  .  Chart.laxis_title    .~ "Frequency"
-      $ Chart.layout1_bottom_axis .  Chart.laxis_title    .~ "Statistic"
-      $ Chart.layout1_plots       .~ [ Right (Chart.plotBars randomizationBars),
-                                       Right statisticLine, Right sigLines ]
-      $ Chart.setLayout1Foreground   opaqueBlack
+        Chart.layout_background    .~ Chart.solidFillStyle opaqueWhite
+      $ Chart.layout_y_axis        .  Chart.laxis_title    .~ "Frequency"
+      $ Chart.layout_x_axis        .  Chart.laxis_title    .~ "Statistic"
+      $ Chart.layout_plots         .~ [ Chart.plotBars randomizationBars,
+                                        statisticLine, sigLines ]
+      $ Chart.setLayoutForeground   opaqueBlack
       $ def
     randomizationBars =
         Chart.plot_bars_style       .~ Chart.BarsStacked
