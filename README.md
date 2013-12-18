@@ -77,3 +77,41 @@ model and the reversible model:
     Not significant: 0.0273972602739726
 
 In this case, the samples do not differ significantly.
+
+Both utilities can also draw the distribution of test scores of the
+randomized samples and how it relates to the test score of the original
+samples:
+
+~~~
+% approx_rand_test_paired -h -i 10000 -p 0.05 examples/fluency.scores examples/reversible.scores 
+Iterations: 10000
+Sample size: 1621
+Test type: TwoTailed
+Test significance: 0.05
+Tail significance: 0.025
+Test statistic: 0.0032431465344367667
+Not significant: 0.025997400259974
+
+   -4.402e-3 | █
+   -3.794e-3 | ████
+   -3.187e-3 | ████████
+   -2.579e-3 | ███████████████
+   -1.972e-3 | █████████████████████████
+   -1.364e-3 | ███████████████████████████████████
+   -7.567e-4 | ███████████████████████████████████████████████
+   -1.492e-4 | ███████████████████████████████████████████████████
+    4.583e-4 | ██████████████████████████████████████████████████
+    1.066e-3 | ███████████████████████████████████████
+    1.673e-3 | ███████████████████████████████
+    2.281e-3 | ██████████████████████
+    2.888e-3 | ███████████
+    3.496e-3 | ✣✣✣✣✣✣
+    4.103e-3 | ██
+    4.711e-3 | █
+~~~
+
+Or, if you prefer, you can create a chart in a format such as SVG:
+
+~~~
+% approx_rand_test_paired -w chart.svg -i 10000 -p 0.05 examples/fluency.scores examples/reversible.scores
+~~~
