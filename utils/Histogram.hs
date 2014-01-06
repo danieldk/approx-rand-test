@@ -13,11 +13,9 @@ histogram ::
      Int
   -> TestResult
   -> Either String [(Double, Int)]
-histogram prefBins (TestResult _ _ randomizedStats) =
-  if bins < 2 then
-    Left "Cannot make a histogram, because the data cannot be divided in more than one bin."
-  else
-    Right $ VG.toList $ VG.zip ticks numSamples
+histogram prefBins (TestResult _ _ randomizedStats)
+  | bins < 2  = Left "Cannot make a histogram - data cannot be divided in more than one bin."
+  | otherwise = Right $ VG.toList $ VG.zip ticks numSamples
   where
     bins = numBins prefBins randomizedStats
     (lowerBounds, numSamples) =
