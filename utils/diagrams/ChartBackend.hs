@@ -7,8 +7,8 @@ module ChartBackend (
 
 import           Control.Lens.Setter ((.~))
 import           Control.Monad (void)
-import           Data.Default
-import           Data.Default.Class ()
+import           Data.Default.Class
+import           Data.Default.Instances.Containers ()
 import qualified Graphics.Rendering.Chart as Chart
 import qualified Graphics.Rendering.Chart.Backend.Diagrams as DiagramsChart
 import qualified System.FilePath.Posix as FP
