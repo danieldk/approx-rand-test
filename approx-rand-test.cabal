@@ -30,7 +30,7 @@ Source-Repository head
 Source-Repository this
   Type:     git
   Location: git://github.com/danieldk/approx-rand-test.git
-  Tag:      0.2.1
+  Tag:      0.2.2
 
 Flag withCairo
   Description: Use Cairo for drawing charts, supports more output formats.
