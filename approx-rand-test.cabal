@@ -15,7 +15,7 @@ Description:
   .
   The utilities can also draw histograms of the applications of the test
   statistic to the randomized samples. For support for more file formats,
-  install the package with the @-withCairo@ flag.
+  install the package with the @-fwithCairo@ flag.
   .
 Cabal-Version: >= 1.8
 Build-Type:    Simple
