@@ -1,5 +1,5 @@
 Name:          approx-rand-test
-Version:       0.2.1
+Version:       0.2.2
 License:       OtherLicense
 License-file:  LICENSE
 Copyright:     Copyright 2012-2013 Daniël de Kok
@@ -54,10 +54,10 @@ Executable approx_rand_test
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
-                  Chart == 1.1, colour == 2.3.*, conduit >= 0.4 && < 1.1,
+                  Chart == 1.2.2, colour == 2.3.*, conduit >= 0.4 && < 1.1,
                   containers >= 0.4 && < 0.6, data-default-class == 0.0.*,
                   data-default-instances-containers == 0.0.*,
-                  filepath >= 1.3 && < 1.5, lens == 3.9.*,
+                  filepath >= 1.3 && < 1.5, lens >= 3.9 && < 4.2,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1, mtl >= 2.0.1 && < 2.2,
                   text >= 0.11.1 && < 0.11.4, vector >= 0.9 && < 0.11,
@@ -65,10 +65,10 @@ Executable approx_rand_test
 
   if flag(withCairo)
     Hs-Source-Dirs: utils/cairo
-    Build-Depends:  Chart-cairo == 1.1
+    Build-Depends:  Chart-cairo == 1.2.2
   else
     Hs-Source-Dirs: utils/diagrams
-    Build-Depends:  Chart-diagrams == 1.1
+    Build-Depends:  Chart-diagrams == 1.2.2
 
 
 Executable approx_rand_test_paired
@@ -78,10 +78,10 @@ Executable approx_rand_test_paired
   HS-Source-Dirs: utils
   Ghc-Options:    -O2 -Wall
   Build-Depends:  base >= 4 && < 5, approx-rand-test,
-                  Chart == 1.1, colour == 2.3.*, conduit >= 0.4 && < 1.1,
+                  Chart == 1.2.2, colour == 2.3.*, conduit >= 0.4 && < 1.1,
                   containers >= 0.4 && < 0.6, data-default-class == 0.0.*,
                   data-default-instances-containers == 0.0.*,
-                  filepath >= 1.3 && < 1.5, lens == 3.9.*,
+                  filepath >= 1.3 && < 1.5, lens >= 3.9 && < 4.2,
                   mersenne-random-pure64 == 0.2.0.*,
                   monad-mersenne-random == 0.1, mtl >= 2.0.1 && < 2.2,
                   text >= 0.11.1 && < 0.11.4, vector >= 0.9 && < 0.11,
@@ -89,10 +89,10 @@ Executable approx_rand_test_paired
 
   if flag(withCairo)
     Hs-Source-Dirs: utils/cairo
-    Build-Depends:  Chart-cairo == 1.1
+    Build-Depends:  Chart-cairo == 1.2.2
   else
     Hs-Source-Dirs: utils/diagrams
-    Build-Depends:  Chart-diagrams == 1.1
+    Build-Depends:  Chart-diagrams == 1.2.2
 
 Test-Suite tests
   Type:           exitcode-stdio-1.0
